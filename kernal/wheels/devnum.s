@@ -135,19 +135,19 @@ L50D6:	ldx r5L
 	lda L5169
 	sta _driveType,x
 	ldx r5H
-	lda $88BF,x
+	lda _ramBase,x
 	pha
-	lda e88b7,x
+	lda _driveData,x
 	pha
 	ldy r5L
-	lda $88BF,y
-	sta $88BF,x
-	lda e88b7,y
-	sta e88b7,x
+	lda _ramBase,y
+	sta _ramBase,x
+	lda _driveData,y
+	sta _driveData,x
 	pla
-	sta e88b7,y
+	sta _driveData,y
 	pla
-	sta $88BF,y
+	sta _ramBase,y
 	lda L5168
 	sta _driveType,x
 	beq L5127

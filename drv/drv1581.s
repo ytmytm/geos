@@ -1578,7 +1578,7 @@ DoClearCache:
 	lda #2
 	sta r2L
 	ldy curDrive
-	lda driveData,y
+	lda _ramBase,y
 	sta r3L
 DoClrCache1:
 	jsr StashRAM
@@ -1635,7 +1635,7 @@ DoCacheDisk:
 	tya
 	pha
 	ldy curDrive
-	lda driveData,y
+	lda _ramBase,y
 	sta r3L
 	ldy #0
 	sty r1L

@@ -89,7 +89,7 @@ __GetDirHead:
 	bnex GDH_0
 	ldy curDrive
 	lda curDirHead+3
-	sta e88b7,y
+	sta _driveData,y
 	bpl GDH_0
 	jsr SetDirHead_2
 	jsr __GetBlock
@@ -120,7 +120,7 @@ __PutDirHead:
 	bnex PDH_1
 	ldy curDrive
 	lda curDirHead+3
-	sta e88b7,y
+	sta _driveData,y
 	bpl PDH_0
 	jsr SetDirHead_2
 	jsr WriteBlock
@@ -173,7 +173,7 @@ CheckParams:
 	cmp #$24
 	bcc CheckParams_1
 	ldy curDrive
-	lda e88b7,y
+	lda _driveData,y
 	bpl CheckParams_2
 	lda r1L
 	cmp #$47
