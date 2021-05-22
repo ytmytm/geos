@@ -231,6 +231,12 @@ RELOCATOR_SOURCES = \
 	kernal/start/relocator128.s
 endif
 
+# code that belongs to beamracer only
+ifeq ($(VARIANT), beamracer)
+	KERNAL_SOURCES += \
+	kernal/beamracer/dlist.s 
+endif
+
 DRIVER_SOURCES= \
 	drv/drv1541.bin \
 	drv/drv1571.bin \
