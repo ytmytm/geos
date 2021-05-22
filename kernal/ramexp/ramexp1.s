@@ -101,6 +101,31 @@ ASSERT_NOT_BELOW_IO
 	rts
 .endif
 
+.if .defined(useBeamRacerRam)
+.include "kernal/beamracer/beamracer-vlib/vasyl.s"
+DetectRamExp:
+	START_IO
+	; knock_knock and detection routine from vlib.s
+	; https://github.com/madhackerslab/beamracer-vlib/blob/09eb0dfd65b9ca3aa30cb98c35499b1dcea1bfd8/vlib.s
+	ldx #255
+	cpx VREG_CONTROL
+	bne @active
+	lda #$42
+	sta VREG_CONTROL
+	lda #$52
+	sta VREG_CONTROL
+	cpx VREG_CONTROL
+	bne @active
+	; inactive
+	END_IO
+	LoadW r0, ExpFaultDB
+	jsr DoDlgBox
+	jmp ToBASIC
+@active:
+	END_IO
+	rts
+.endif
+
 .ifdef useRamExp
 ExpFaultDB:
 	.byte DEF_DB_POS | 1
@@ -120,6 +145,9 @@ ExpFaultStr2:
 .endif
 .ifdef usePlus60K
 	.byte "only with a +60K expansion.", 0
+.endif
+.ifdef useBeamRacerRam
+	.byte "only with Beamracer.", 0
 .endif
 
 BVChainTab:

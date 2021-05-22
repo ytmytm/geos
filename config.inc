@@ -115,13 +115,7 @@ config_inc = 1
 	;onlyVLIR = 1
 
 	; RAM expansions configuration
-	; (only one may be defined, if all are undefined, then REU is utililzed)
-	; for +60K expansion users
-	;usePlus60K = 1
-	; for Ram Cart 64K
-	;useRamCart64 = 1
-	; for Ram Cart 128K
-	;useRamCart128 = 1
+	useBeamRacerRam = 1
 
 	; GEOS2000
 	; makes drawing dialog boxes much faster, might cause visual mess
@@ -192,9 +186,14 @@ REUOsVarBackup  =    $7900                      ; base for OS_VARS_LGH bytes for
 REUDskDrvSPC    =    $8300                      ; base for 4*DISK_DRV_LGH disk drivers
 
 ; do not change two values below - it's automatic
-.if .defined(usePlus60K) || .defined(useRamCart64) || .defined(useRamCart128)
+.if .defined(usePlus60K) || .defined(useRamCart64) || .defined(useRamCart128) || .defined(useBeamRacerRam)
 useRamExp = 1
 .else
+REUPresent = 1
+.endif
+
+; but for Beamracer we want to keep REU support too
+.if .defined(useBeamRacerRam)
 REUPresent = 1
 .endif
 

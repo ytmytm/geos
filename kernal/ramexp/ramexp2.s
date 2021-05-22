@@ -164,6 +164,66 @@ ASSERT_NOT_BELOW_IO
 RamExpWrHlpEnd:
 .endif
 
+.ifdef useBeamRacerRam
+.include "kernal/beamracer/beamracer-vlib/vasyl.s"
+; r0   c64 address
+; r1   exp page number, 3 bits of r1H but bank 7 reserved for screen (not checked here)
+; r2H  # of bytes (in pages)
+RamExpRead:
+	START_IO
+	PushB r0H
+	lda r1H
+	and #CONTROL_RAMBANK_MASK
+	sta r1H
+	lda VREG_CONTROL
+	and #%11111000
+	ora r1H
+	ora #(1 << CONTROL_PORT_READ_ENABLE_BIT)
+	sta VREG_CONTROL
+	LoadB VREG_ADR0, 0
+	MoveB r1L, VREG_ADR0+1
+	LoadB VREG_STEP0, 1
+	ldx r2H
+	ldy #0
+@1:	lda VREG_PORT0
+	sta (r0),y
+	iny
+	bne @1
+	inc r0H
+	dex
+	bpl @1
+	rmbf CONTROL_PORT_READ_ENABLE_BIT, VREG_CONTROL ; clear to avoid 'weird issues'
+	PopB r0H
+	END_IO
+	rts
+
+RamExpWrite:
+	START_IO
+	PushB r0H
+	lda r1H
+	and #CONTROL_RAMBANK_MASK
+	sta r1H
+	lda VREG_CONTROL
+	and #%11111000
+	ora r1H
+	sta VREG_CONTROL
+	LoadB VREG_ADR0, 0
+	MoveB r1L, VREG_ADR0+1
+	LoadB VREG_STEP0, 1
+	ldx r2H
+	ldy #0
+@2:	lda (r0),y
+	sta VREG_PORT0
+	iny
+	bne @2
+	inc r0H
+	dex
+	bpl @2
+	PopB r0H
+	END_IO
+	rts
+.endif
+
 .ifdef useRamCart64
 RamExpRead:
 	PushB CPU_DATA
