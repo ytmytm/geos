@@ -149,9 +149,6 @@ ExpFaultStr2:
 .ifdef useBeamRacerRam
 	.byte "only with Beamracer.", 0
 .endif
-
-BVChainTab:
-
 .endif
 
 .ifdef useRamExp
@@ -223,5 +220,8 @@ BVLast_1:
 	sta diskBlkBuf+RAM_EXP_1STFREE
 	LoadB DeskTopOpen, 0
 	jmp RamExpPutStat
+
+BVChainTab:
+	; this is a buffer, but what's its size?
 .endif
 
