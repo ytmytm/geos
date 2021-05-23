@@ -52,8 +52,14 @@ jobs:
           name: geos64-beamracer.prg
           path: build/beamracer/kernal_compressed.prg
 
-      - name: Archive map and VICE monitor labels
+      - name: Archive VICE monitor labels
         uses: actions/upload-artifact@v2
         with:
-          name: geos64-map-and-labels
-          path: build/beamracer/kernal/kernal.{lab,map}
+          name: geos64-beamracer-vice-labels
+          path: build/beamracer/kernal/kernal.lab
+
+      - name: Archive memory map
+        uses: actions/upload-artifact@v2
+        with:
+          name: geos64-beamracer-memory-map
+          path: build/beamracer/kernal/kernal.map
