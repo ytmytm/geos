@@ -26,8 +26,8 @@ jobs:
       
       # make and install CC65
       - name: CC65 make
-        run: cd cc65 && make && sudo make install && cd ..
+        run: cd cc65 && make && sudo PREFIX=/usr/local make install && cd ..
 
       # make beamracer variant
-      - name: Run a one-line script
+      - name: Build GEOS-beamracer
         run: make VARIANT=beamracer
