@@ -26,7 +26,7 @@ jobs:
       
       # make and install CC65
       - name: CC65 make
-        run: cd cc65 && make ca65 && sudo PREFIX=/usr/local make install && cd ..
+        run: cd cc65 && make && sudo PREFIX=/usr/local make install && cd ..
       
       # clone pucrunch
       - name: pucrunch clone
