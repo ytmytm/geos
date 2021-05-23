@@ -192,7 +192,8 @@ RamExpRead:
 	inc r0H
 	dex
 	bpl @1
-	rmbf CONTROL_PORT_READ_ENABLE_BIT, VREG_CONTROL ; clear to avoid 'weird issues'
+	;rmbf CONTROL_PORT_READ_ENABLE_BIT, VREG_CONTROL ; clear to avoid 'weird issues'
+	LoadB VREG_CONTROL, 0 ; turn off everything, including display list
 	PopB r0H
 	END_IO
 	rts
@@ -219,6 +220,7 @@ RamExpWrite:
 	inc r0H
 	dex
 	bpl @2
+	LoadB VREG_CONTROL, 0 ; turn off everything, including display list
 	PopB r0H
 	END_IO
 	rts
