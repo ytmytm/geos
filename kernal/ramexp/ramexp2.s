@@ -175,6 +175,10 @@ RamExpRead:
 	lda r1H
 	and #CONTROL_RAMBANK_MASK
 	sta r1H
+	lda #$42		; re-enable BeamRacer
+	sta VREG_CONTROL
+	lda #$52
+	sta VREG_CONTROL
 	lda VREG_CONTROL
 	and #%11111000
 	ora r1H
@@ -204,6 +208,10 @@ RamExpWrite:
 	lda r1H
 	and #CONTROL_RAMBANK_MASK
 	sta r1H
+	lda #$42		; re-enable BeamRacer
+	sta VREG_CONTROL
+	lda #$52
+	sta VREG_CONTROL
 	lda VREG_CONTROL
 	and #%11111000
 	ora r1H
