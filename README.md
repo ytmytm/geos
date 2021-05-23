@@ -1,5 +1,7 @@
 # GEOS Source Code
 
+[![CI](https://github.com/ytmytm/geos/actions/workflows/main.yml/badge.svg?branch=beamracer-ramexp)](https://github.com/ytmytm/geos/actions/workflows/main.yml)
+
 by Berkeley Softworks, reverse engineered by *Maciej Witkowiak*, *Michael Steil*.
 
 ## Description
@@ -75,6 +77,10 @@ Optionally, the following features that were not part of the original GEOS 2.0 c
 * [c1541](http://vice-emu.sourceforge.net) for generating the disk image
 
 Without pucrunch/c1541, you can still build an uncompressed KERNAL binary image.
+
+## Clone repository
+
+Run `git clone --recursive --branch beamracer-ramexp https://github.com/ytmytm/geos.git` to clone both main repo and external BeamRacer VASYL library.
 
 ## Building
 
