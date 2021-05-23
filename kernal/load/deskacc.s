@@ -132,7 +132,6 @@ tmp3:	.byte 0
 	lda fileHeader+O_GHEND_ADDR+1
 	sub diskBlkBuf+DACC_ST_ADDR+1
 	sta diskBlkBuf+DACC_LGH
-	inc diskBlkBuf+DACC_LGH ; last page
 	jsr RamExpPutStat
 	MoveW diskBlkBuf+DACC_ST_ADDR, r0
 	MoveB diskBlkBuf+DACC_LGH, r2H
