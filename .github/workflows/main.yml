@@ -22,19 +22,22 @@ jobs:
         with:
             submodules: recursive
 
-      # Clone CC65
-      - name: CC65 clone
+      - name: cc65 install
         run: sudo apt-get install cc65
+
+#      # make and install CC65
+#      - name: CC65 clone
 #        run: git clone https://github.com/cc65/cc65.git
-      
-      # make and install CC65
 #      - name: CC65 make
 #        run: cd cc65 && make && sudo PREFIX=/usr/local make install && cd ..
-      
+
+#      - name: VICE install (for c1541)
+#        run: sudo apt-get install vice
+
       # clone pucrunch
       - name: pucrunch clone
         run: git clone https://github.com/mist64/pucrunch.git
-    
+
       # make and install pucrunch
       - name: pucrunch make
         run: cd pucrunch && make && sudo cp pucrunch /usr/local/bin && cd ..
@@ -42,3 +45,15 @@ jobs:
       # make beamracer variant
       - name: Build GEOS-beamracer
         run: make VARIANT=beamracer
+
+      - name: Archive binary
+        uses: actions/upload-artifact@v2
+        with:
+          name: geos64-beamracer.prg
+          path: build/beamracer/kernal_compressed.prg
+
+      - name: Archive map and VICE monitor labels
+        uses: actions/upload-artifact@v2
+        with:
+          name: geos64-map-and-labels
+          path: build/beamracer/kernal/kernal.{lab,map}
