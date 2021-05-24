@@ -32,6 +32,9 @@
 .ifdef useRamExp
 .global LoadDeskTop
 .global DetectRamExp
+.ifdef useBeamRacerRam
+.global DoClearCacheRamExp
+.endif
 .endif
 
 .segment "ramexp1"
@@ -122,6 +125,41 @@ DetectRamExp:
 	jsr DoDlgBox
 	jmp ToBASIC
 @active:
+	END_IO
+	rts
+
+; copied from drv1541
+DoClearCacheRamExp:
+	; clear 683 pages
+	; cache tests if first two bytes are both 0, this works as 1541 initializes sectors with $00, $ff in first two bytes
+	ldy curDrive
+	lda _ramBase, y	; bank number
+	sta r1H
+	LoadB r1L, 0	; start page
+	MoveW r1, r3
+	AddVW 683, r3	; end condition - start+sector count
+	; we're clear of IO
+	START_IO
+ASSERT_NOT_BELOW_IO
+	LoadB VREG_ADR0, 0
+	LoadB VREG_STEP0, 1
+	ldy #0
+@1:	lda VREG_CONTROL
+	and #%11111000
+	ora r1H
+	sta VREG_CONTROL
+	MoveB r1L, VREG_ADR0+1
+	sty VREG_PORT0
+	sty VREG_PORT0 ; we could do LoadB VREG_REP0, 255 but we don't need all that, we only clear sector link
+;	LoadB VREG_REP0, 255
+;@11:	lda VREG_REP0
+;	bne @11
+	inc r1L
+	bne @2
+	inc r1H
+@2:	CmpW r1, r3
+	bne @1
+ASSERT_NOT_BELOW_IO
 	END_IO
 	rts
 .endif

@@ -1612,6 +1612,125 @@ DDatas:
 	;.word 0
 .segment "drv1541_b"
 
+.ifdef useBeamRacerRam ; general useRamExp would suffice but +60K/RC64/RC128 don't have enough space for full disk cache
+.include "kernal/beamracer/beamracer-vlib/vasyl.s"
+ClearCache:
+	bbsf 6, curType, DoClearCache
+	rts
+DoClearCache:
+	; clear 683 pages
+	; cache tests if first two bytes are both 0, this works as 1541 initializes sectors with $00, $ff in first two bytes
+	ldy curDrive
+	lda _ramBase, y	; bank number
+	sta r1H
+	LoadB r1L, 0	; start page
+	MoveW r1, r3
+	AddVW 683, r3	; end condition - start+sector count
+	; we're clear of IO
+ASSERT_NOT_BELOW_IO
+	LoadB VREG_ADR0, 0
+	LoadB VREG_STEP0, 1
+	ldy #0
+@1:	lda VREG_CONTROL
+	and #%11111000
+	ora r1H
+	sta VREG_CONTROL
+	MoveB r1L, VREG_ADR0+1
+	sty VREG_PORT0
+	sty VREG_PORT0 ; we could do LoadB VREG_REP0, 255 but we don't need all that, we only clear sector link
+;	LoadB VREG_REP0, 255
+;@11:	lda VREG_REP0
+;	bne @11
+ASSERT_NOT_BELOW_IO
+	inc r1L
+	bne @2
+	inc r1H
+@2:	CmpW r1, r3
+	bne @1
+	rts
+
+DoCacheRead:
+ASSERT_NOT_BELOW_IO
+	jsr DoCacheDiskOpStart
+	lda VREG_CONTROL
+	ora #(1 << CONTROL_PORT_READ_ENABLE_BIT)
+	sta VREG_CONTROL
+	ldy #0
+@1:	lda VREG_PORT0
+	sta (r4),y
+	iny
+	bne @1
+	rmbf CONTROL_PORT_READ_ENABLE_BIT, VREG_CONTROL ; clear to avoid 'weird issues'
+	ldy #0
+	lda (r4),y
+	iny
+	ora (r4),y
+ASSERT_NOT_BELOW_IO
+	rts ; 0 = not cached, <>0 = cached
+
+DoCacheVerify:
+ASSERT_NOT_BELOW_IO
+	jsr DoCacheDiskOpStart
+	ldx #$20
+	lda VREG_CONTROL
+	ora #(1 << CONTROL_PORT_READ_ENABLE_BIT)
+	sta VREG_CONTROL
+	ldy #0
+@1:	lda VREG_PORT0
+	cmp (r4),y
+	bne @2
+	iny
+	bne @1
+	ldx #0
+@2:	rmbf CONTROL_PORT_READ_ENABLE_BIT, VREG_CONTROL ; clear to avoid 'weird issues'
+ASSERT_NOT_BELOW_IO
+	txa
+	ldx #0
+	and #$20
+	rts ; 0 = same, <>0 - different
+
+DoCacheWrite:
+ASSERT_NOT_BELOW_IO
+	jsr DoCacheDiskOpStart
+	ldy #0
+@1:	lda (r4), y
+	sta VREG_PORT0
+	iny
+	bne @1
+ASSERT_NOT_BELOW_IO
+	rts
+
+DoCacheDiskOpStart:
+	; input:
+	; r4 - local address
+	; r1 - t&s
+	; output:
+	; r1 - ramexp address
+	PushW r1
+	ldy r1L          ; track
+	MoveB r1H, r1L   ; sector -> page number
+	lda CacheTabL, y ; track to page (lo)
+	add r1L
+	sta r1L
+	lda CacheTabH, y ; track to page (hi==bank)
+	ldy curDrive
+	adc _ramBase, y  ; bank offset + carry flag from track+sector addition
+	sta r1H
+ASSERT_NOT_BELOW_IO
+	lda VREG_CONTROL
+	and #%11111000
+	ora r1H
+	sta VREG_CONTROL
+	LoadB VREG_ADR0, 0
+	MoveB r1L, VREG_ADR0+1
+	LoadB VREG_STEP0, 1
+inc $d020
+ASSERT_NOT_BELOW_IO
+	PopW r1
+	ldx #0 ; no error	
+	rts
+.else
+
 ClrCacheDat:
 	.word 0
 
@@ -1695,6 +1814,8 @@ DoCacheDisk:
 	txa
 	ldx #0
 	rts
+
+.endif ; useBeamRacerRam
 
 CacheTabL:
 	.byte $00, $15, $2a, $3f, $54, $69, $7e, $93

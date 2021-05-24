@@ -36,8 +36,10 @@
 .ifdef useRamExp
 .import DetectRamExp
 .import LoadDeskTop
+.ifdef useBeamRacerRam
+.import DoClearCacheRamExp
 .endif
-
+.endif
 
 .segment "start"
 
@@ -135,6 +137,22 @@ ASSERT_NOT_BELOW_IO
 	lda #DRV_TYPE ; see config.inc
 	sta curType
 	sta _driveType,y
+.ifdef useRamExp
+	jsr DetectRamExp
+.if .defined(useBeamRacerRam) && .defined(drv1541)
+	; enable disk caching for 1541
+	ldy curDrive
+	lda _driveType,y
+	cmp #DRV_1541
+	bne @22
+	ora #%01000000
+	sta _driveType,y
+	lda #1		; in banks 1-2-3
+	sta _ramBase,y
+	jsr DoClearCacheRamExp
+@22:
+.endif
+.endif
 
 ; This is the original code the cbmfiles version
 ; has at $5000.
@@ -144,9 +162,6 @@ OrigResetHandle:
 	ldx #$ff
 	jsr _DoFirstInitIO
 	jsr InitGEOEnv
-.ifdef useRamExp
-	jsr DetectRamExp
-.endif
 	jsr GetDirHead
 	MoveB bootSec, r1H
 	MoveB bootTr, r1L
