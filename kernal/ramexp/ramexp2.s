@@ -175,10 +175,6 @@ RamExpRead:
 	lda r1H
 	and #CONTROL_RAMBANK_MASK
 	sta r1H
-	lda #$42		; re-enable BeamRacer
-	sta VREG_CONTROL
-	lda #$52
-	sta VREG_CONTROL
 	lda VREG_CONTROL
 	and #%11111000
 	ora r1H
@@ -196,8 +192,7 @@ RamExpRead:
 	inc r0H
 	dex
 	bpl @1
-	;rmbf CONTROL_PORT_READ_ENABLE_BIT, VREG_CONTROL ; clear to avoid 'weird issues'
-	LoadB VREG_CONTROL, 0 ; turn off everything, including display list
+	rmbf CONTROL_PORT_READ_ENABLE_BIT, VREG_CONTROL ; clear to avoid 'weird issues'
 	PopB r0H
 	END_IO
 	rts
@@ -208,10 +203,6 @@ RamExpWrite:
 	lda r1H
 	and #CONTROL_RAMBANK_MASK
 	sta r1H
-	lda #$42		; re-enable BeamRacer
-	sta VREG_CONTROL
-	lda #$52
-	sta VREG_CONTROL
 	lda VREG_CONTROL
 	and #%11111000
 	ora r1H
@@ -228,7 +219,6 @@ RamExpWrite:
 	inc r0H
 	dex
 	bpl @2
-	LoadB VREG_CONTROL, 0 ; turn off everything, including display list
 	PopB r0H
 	END_IO
 	rts

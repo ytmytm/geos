@@ -104,7 +104,11 @@ DialogCopyTab3:
 	.byte 1
 	.byte 3
 	.byte 2
+.ifdef beamracer
+	.byte 6	; skip over mob7clr because copying without clearing 6th bit will disable BeamRacer
+.else
 	.byte 7
+.endif
 	.byte 1
 	.byte NULL
 .else
@@ -130,7 +134,11 @@ DialogCopyTab:
 	.word mcmclr0
 	.byte 2
 	.word mob1clr
+.ifdef beamracer
+	.byte 6	; skip over mob7clr because copying without clearing 6th bit will disable BeamRacer
+.else
 	.byte 7
+.endif
 	.word moby2
 	.byte 1
 	.word NULL
