@@ -1660,9 +1660,6 @@ ASSERT_NOT_BELOW_IO
 	sei
 	START_IO
 	jsr DoCacheDiskOpStart
-	lda VREG_CONTROL
-	ora #(1 << CONTROL_PORT_READ_ENABLE_BIT)
-	sta VREG_CONTROL
 	ldy #0
 @1:	lda VREG_PORT0
 	sta (r4),y
@@ -1672,7 +1669,6 @@ ASSERT_NOT_BELOW_IO
 ASSERT_NOT_BELOW_IO
 	END_IO
 	plp
-	ldy #0		; XXX not needed!
 	lda (r4),y
 	iny
 	ora (r4),y
@@ -1685,9 +1681,6 @@ ASSERT_NOT_BELOW_IO
 	START_IO
 	jsr DoCacheDiskOpStart
 	ldx #$20
-	lda VREG_CONTROL
-	ora #(1 << CONTROL_PORT_READ_ENABLE_BIT)
-	sta VREG_CONTROL
 	ldy #0
 @1:	lda VREG_PORT0
 	cmp (r4),y
@@ -1715,6 +1708,7 @@ ASSERT_NOT_BELOW_IO
 	sta VREG_PORT0
 	iny
 	bne @1
+	rmbf CONTROL_PORT_READ_ENABLE_BIT, VREG_CONTROL ; clear to avoid 'weird issues'
 ASSERT_NOT_BELOW_IO
 	END_IO
 	plp
@@ -1726,27 +1720,28 @@ DoCacheDiskOpStart:
 	; r1 - t&s
 	; output:
 	; r1 - ramexp address
-	PushW r1
 	ldy r1L          ; track
-	MoveB r1H, r1L   ; sector -> page number
+	MoveB r1H, z8c   ; sector -> page number
 	dey		 ; track offset from 0
 	lda CacheTabL, y ; track to page (lo)
-	add r1L
-	sta r1L
+	add z8c
+	sta z8c
 	lda CacheTabH, y ; track to page (hi==bank)
 	ldy curDrive
 	adc _ramBase, y  ; bank offset + carry flag from track+sector addition
-	sta r1H
+	sta z8d
 ASSERT_NOT_BELOW_IO
 	lda VREG_CONTROL
 	and #%11111000
-	ora r1H
+	ora z8d
+	ora #(1 << CONTROL_PORT_READ_ENABLE_BIT)
 	sta VREG_CONTROL
-	LoadB VREG_ADR0, 0
-	MoveB r1L, VREG_ADR0+1
-	LoadB VREG_STEP0, 1
+	ldy #0
+	sty VREG_ADR0 ; page start
+	MoveB z8c, VREG_ADR0+1
+	iny
+	sty VREG_STEP0 ; step 1
 ASSERT_NOT_BELOW_IO
-	PopW r1
 	ldx #0 ; no error	
 	rts
 .else
