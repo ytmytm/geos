@@ -1624,10 +1624,13 @@ DoClearCache:
 	lda _ramBase, y	; bank number
 	sta r1H
 	LoadB r1L, 0	; start page
-	MoveW r1, r3
-	AddVW 683, r3	; end condition - start+sector count
+	MoveW r1, r2
+	AddVW 683, r2	; end condition - start+sector count
 	; we're clear of IO
 ASSERT_NOT_BELOW_IO
+	php
+	sei
+	START_IO
 	LoadB VREG_ADR0, 0
 	LoadB VREG_STEP0, 1
 	ldy #0
@@ -1641,16 +1644,21 @@ ASSERT_NOT_BELOW_IO
 ;	LoadB VREG_REP0, 255
 ;@11:	lda VREG_REP0
 ;	bne @11
-ASSERT_NOT_BELOW_IO
 	inc r1L
 	bne @2
 	inc r1H
-@2:	CmpW r1, r3
+@2:	CmpW r1, r2
 	bne @1
+ASSERT_NOT_BELOW_IO
+	END_IO
+	plp
 	rts
 
 DoCacheRead:
 ASSERT_NOT_BELOW_IO
+	php
+	sei
+	START_IO
 	jsr DoCacheDiskOpStart
 	lda VREG_CONTROL
 	ora #(1 << CONTROL_PORT_READ_ENABLE_BIT)
@@ -1661,15 +1669,20 @@ ASSERT_NOT_BELOW_IO
 	iny
 	bne @1
 	rmbf CONTROL_PORT_READ_ENABLE_BIT, VREG_CONTROL ; clear to avoid 'weird issues'
-	ldy #0
+ASSERT_NOT_BELOW_IO
+	END_IO
+	plp
+	ldy #0		; XXX not needed!
 	lda (r4),y
 	iny
 	ora (r4),y
-ASSERT_NOT_BELOW_IO
 	rts ; 0 = not cached, <>0 = cached
 
 DoCacheVerify:
 ASSERT_NOT_BELOW_IO
+	php
+	sei
+	START_IO
 	jsr DoCacheDiskOpStart
 	ldx #$20
 	lda VREG_CONTROL
@@ -1684,6 +1697,8 @@ ASSERT_NOT_BELOW_IO
 	ldx #0
 @2:	rmbf CONTROL_PORT_READ_ENABLE_BIT, VREG_CONTROL ; clear to avoid 'weird issues'
 ASSERT_NOT_BELOW_IO
+	END_IO
+	plp
 	txa
 	ldx #0
 	and #$20
@@ -1691,6 +1706,9 @@ ASSERT_NOT_BELOW_IO
 
 DoCacheWrite:
 ASSERT_NOT_BELOW_IO
+	php
+	sei
+	START_IO
 	jsr DoCacheDiskOpStart
 	ldy #0
 @1:	lda (r4), y
@@ -1698,6 +1716,8 @@ ASSERT_NOT_BELOW_IO
 	iny
 	bne @1
 ASSERT_NOT_BELOW_IO
+	END_IO
+	plp
 	rts
 
 DoCacheDiskOpStart:
@@ -1709,6 +1729,7 @@ DoCacheDiskOpStart:
 	PushW r1
 	ldy r1L          ; track
 	MoveB r1H, r1L   ; sector -> page number
+	dey		 ; track offset from 0
 	lda CacheTabL, y ; track to page (lo)
 	add r1L
 	sta r1L
@@ -1724,7 +1745,6 @@ ASSERT_NOT_BELOW_IO
 	LoadB VREG_ADR0, 0
 	MoveB r1L, VREG_ADR0+1
 	LoadB VREG_STEP0, 1
-inc $d020
 ASSERT_NOT_BELOW_IO
 	PopW r1
 	ldx #0 ; no error	
