@@ -46,9 +46,6 @@ L1DF4   = $1DF4
 ;RunREU  = $6000
 L6216   = $6216
 
-L88C7   = ramBase
-_ramBase = ramBase-8
-
 DRIVER_BASE_REU	= $3C80		; space for 4*$0d80 = $3600 disk drivers in REU bank 0
 
 ; GEOS Kernal fixed locations
@@ -290,8 +287,8 @@ L0558:
 	LoadB	NUMDRV, 0
 :	STA     driveType,Y
         STA     turboFlags,Y
-        STA     _ramBase,Y
-        STA     L88C7,Y
+        STA     driveData,Y
+        STA     ramBase,Y
         DEY
         BPL	:-
 
