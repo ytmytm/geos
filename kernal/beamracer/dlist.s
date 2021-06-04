@@ -110,7 +110,7 @@ dl_start:
 	MOV	VREG_PBS_PADDINGH, 0
 	; - now turn on sequencer
 	MOV	VREG_PBS_CONTROL, (1 << PBS_CONTROL_ACTIVE_BIT) + br_screen_bank
-	; - finally set the starting address of the logo: its top-left byte (write in order: lo, then hi byte)
+	; - finally set the startaddress (write in order: lo, then hi byte)
 	; It's important that the address is set at the very end - otherwise it could
 	; be affected by not-yet-ready values of other sequencer registers.
 	MOV	VREG_PBS_BASEL, <br_screen_base
