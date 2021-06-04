@@ -25,6 +25,7 @@ LAST_LINE = 12*8
 
 .global br_dlist_activate
 .global dl_start_init
+.global dl_start
 
         .segment "start"
         ; this will be called after BR presence check so we don't need to knock-knock again
@@ -38,7 +39,7 @@ br_dlist_activate:
 	and #%11111000
 	ora #br_dlist_bank
 	sta VREG_CONTROL
-	LoadB VREG_ADR0, <br_dlist_base
+	LoadB VREG_ADR0,   <br_dlist_base
 	LoadB VREG_ADR0+1, >br_dlist_base
 	LoadB VREG_STEP0, 1
 
@@ -53,7 +54,7 @@ br_dlist_activate:
 	; activate dlist
 	; bank comes from VREG_CONTROL?
 	LoadB VREG_DLISTL, <dl_start	; not a LoadW because we want to be sure about write order: lo, then hi byte
-	LoadB VREG_DLISTH, >dl_start
+	LoadB VREG_DLISTH, >dl_start    ; XXX dl_start_init doesn't work, why?
 	smbf CONTROL_DLIST_ON_BIT, VREG_CONTROL
 	END_IO
 :       bra :-
@@ -63,7 +64,7 @@ br_dlist_activate:
 
         .res br_dlist_base
 
-dl_start_init:
+dl_start_init:  ; doesn't work, why?
 	; we want to have port access independent of display list
 	; hence we switch to 2nd display list immediately
 	MOV	VREG_DLIST2L, <dl_start
