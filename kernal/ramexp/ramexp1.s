@@ -144,6 +144,8 @@ DoClearCacheRamExp:
 	AddVW 683, r3	; end condition - start+sector count
 	; we're clear of IO
 	START_IO
+	; XXX disable display list, we will switch bank
+	rmbf CONTROL_DLIST_ON_BIT, VREG_CONTROL
 	LoadB VREG_ADR0, 0
 	LoadB VREG_STEP0, 1
 	ldy #0
@@ -160,6 +162,12 @@ DoClearCacheRamExp:
 	IncW r1
 	CmpW r1, r3
 	bne @1
+	; XXX restore display list bank and enable display list
+	lda VREG_CONTROL
+	and #%11111000
+	ora #br_dlist_bank
+	sta VREG_CONTROL
+	smbf CONTROL_DLIST_ON_BIT, VREG_CONTROL
 	END_IO
 	rts
 .endif

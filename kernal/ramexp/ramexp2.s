@@ -172,6 +172,8 @@ RamExpWrHlpEnd:
 RamExpRead:
 	START_IO
 	PushB r0H
+	; XXX disable display list, we will switch bank
+	rmbf CONTROL_DLIST_ON_BIT, VREG_CONTROL
 	lda r1H
 	and #CONTROL_RAMBANK_MASK
 	sta r1H
@@ -193,6 +195,12 @@ RamExpRead:
 	dex
 	bpl @1
 	rmbf CONTROL_PORT_READ_ENABLE_BIT, VREG_CONTROL ; clear to avoid 'weird issues'
+	; XXX restore display list bank and enable display list
+	lda VREG_CONTROL
+	and #%11111000
+	ora #br_dlist_bank
+	sta VREG_CONTROL
+	smbf CONTROL_DLIST_ON_BIT, VREG_CONTROL
 	PopB r0H
 	END_IO
 	rts
@@ -200,6 +208,8 @@ RamExpRead:
 RamExpWrite:
 	START_IO
 	PushB r0H
+	; XXX disable display list, we will switch bank
+	rmbf CONTROL_DLIST_ON_BIT, VREG_CONTROL
 	lda r1H
 	and #CONTROL_RAMBANK_MASK
 	sta r1H
@@ -219,6 +229,12 @@ RamExpWrite:
 	inc r0H
 	dex
 	bpl @2
+	; XXX restore display list bank and enable display list
+	lda VREG_CONTROL
+	and #%11111000
+	ora #br_dlist_bank
+	sta VREG_CONTROL
+	smbf CONTROL_DLIST_ON_BIT, VREG_CONTROL
 	PopB r0H
 	END_IO
 	rts

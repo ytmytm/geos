@@ -57,7 +57,7 @@ br_dlist_activate:
 	LoadB VREG_DLISTH, >dl_start    ; XXX dl_start_init doesn't work, why?
 	smbf CONTROL_DLIST_ON_BIT, VREG_CONTROL
 	END_IO
-:       bra :-
+;:       bra :-
 	rts
 
         .segment "VASYL"

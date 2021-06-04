@@ -145,7 +145,8 @@ ASSERT_NOT_BELOW_IO
 	lda _driveType,y
 	cmp #DRV_1541
 	bne @22
-	ora #%01000000
+	; XXX disk cache is turned off because there is no space to stop display list/restore display list bank in 1541 driver now
+	;ora #%01000000
 	sta _driveType,y
 	lda #1		; in banks 1-2-3
 	sta _ramBase,y
