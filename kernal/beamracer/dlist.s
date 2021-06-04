@@ -22,6 +22,7 @@ LAST_LINE = 12*8
 
 .import __VASYL_LOAD__
 .import __VASYL_SIZE__
+.import __VASYL_RUN__
 
 .global br_dlist_activate
 .global dl_start_init
@@ -39,8 +40,8 @@ br_dlist_activate:
 	and #%11111000
 	ora #br_dlist_bank
 	sta VREG_CONTROL
-	LoadB VREG_ADR0,   <br_dlist_base
-	LoadB VREG_ADR0+1, >br_dlist_base
+	LoadB VREG_ADR0,   <__VASYL_RUN__
+	LoadB VREG_ADR0+1, >__VASYL_RUN__
 	LoadB VREG_STEP0, 1
 
 	; copy display lists

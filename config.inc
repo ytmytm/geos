@@ -122,7 +122,7 @@ config_inc = 1
 	; Beamracer display list bank
 	br_dlist_bank =  7
 	; Beamracer display list address (right behind the screen)
-	br_dlist_base = 0 ; $00C0 ;$A000 ;+8000
+	br_dlist_base = $c0 ; $00C0 ;$A000 ;+8000
 	; Beamracer screen bank
 	br_screen_bank = 0 ;7
 	; Beamracer screen base address
