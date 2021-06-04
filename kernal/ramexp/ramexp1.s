@@ -33,6 +33,7 @@
 .global LoadDeskTop
 .global DetectRamExp
 .ifdef useBeamRacerRam
+.import br_dlist_activate
 .global DoClearCacheRamExp
 .endif
 .endif
@@ -126,6 +127,9 @@ DetectRamExp:
 	jmp ToBASIC
 @active:
 	END_IO
+	; we can start the display list
+	jsr br_dlist_activate
+:	bra :-
 	rts
 
 ; copied from drv1541
@@ -140,7 +144,6 @@ DoClearCacheRamExp:
 	AddVW 683, r3	; end condition - start+sector count
 	; we're clear of IO
 	START_IO
-ASSERT_NOT_BELOW_IO
 	LoadB VREG_ADR0, 0
 	LoadB VREG_STEP0, 1
 	ldy #0
@@ -154,12 +157,9 @@ ASSERT_NOT_BELOW_IO
 ;	LoadB VREG_REP0, 255
 ;@11:	lda VREG_REP0
 ;	bne @11
-	inc r1L
-	bne @2
-	inc r1H
-@2:	CmpW r1, r3
+	IncW r1
+	CmpW r1, r3
 	bne @1
-ASSERT_NOT_BELOW_IO
 	END_IO
 	rts
 .endif

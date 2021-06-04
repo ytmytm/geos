@@ -115,7 +115,18 @@ config_inc = 1
 	;onlyVLIR = 1
 
 	; RAM expansions configuration
+	; this occupies bank 0 (DeskTop cache, DA swap file)
+        ;               banks 1-3 (1541 cache)
 	useBeamRacerRam = 1
+
+	; Beamracer display list bank
+	br_dlist_bank = 7
+	; Beamracer display list address (right behind the screen)
+	br_dlist_base = $A000 ;+8000
+	; Beamracer screen bank
+	br_screen_bank = 7
+	; Beamracer screen base address
+	br_screen_base = $A000
 
 	; GEOS2000
 	; makes drawing dialog boxes much faster, might cause visual mess
