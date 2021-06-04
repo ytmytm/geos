@@ -120,13 +120,13 @@ config_inc = 1
 	useBeamRacerRam = 1
 
 	; Beamracer display list bank
-	br_dlist_bank = 7
+	br_dlist_bank = 0 ;7
 	; Beamracer display list address (right behind the screen)
-	br_dlist_base = $A000 ;+8000
+	br_dlist_base = $00C0 ;$A000 ;+8000
 	; Beamracer screen bank
-	br_screen_bank = 7
+	br_screen_bank = 0 ;7
 	; Beamracer screen base address
-	br_screen_base = $A000
+	br_screen_base = 0 ;$A000
 
 	; GEOS2000
 	; makes drawing dialog boxes much faster, might cause visual mess

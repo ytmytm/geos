@@ -129,7 +129,7 @@ DetectRamExp:
 	END_IO
 	; we can start the display list
 	jsr br_dlist_activate
-:	bra :-
+	; anything else?
 	rts
 
 ; copied from drv1541
