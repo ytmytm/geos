@@ -77,17 +77,16 @@ br_dlist_activate:
 	; activate dlist
 	; bank comes from VREG_CONTROL?
 	LoadB VREG_DLISTL, <dl_start_init	; not a LoadW because we want to be sure about write order: lo, then hi byte
-	LoadB VREG_DLISTH, >dl_start_init    ; XXX dl_start_init doesn't work, why?
+	LoadB VREG_DLISTH, >dl_start_init
 	smbf CONTROL_DLIST_ON_BIT, VREG_CONTROL
 	END_IO
-;:       bra :-
 	rts
 
         .segment "VASYL"
 
         .res br_dlist_base
 
-dl_start_init:  ; doesn't work, why?
+dl_start_init:
 	; we want to have port access independent of display list
 	; hence we switch to 2nd display list immediately
 	MOV	VREG_DLIST2L, <dl_start
