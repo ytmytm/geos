@@ -153,6 +153,10 @@ _HorizontalLine:
 	stx VREG_STEP1
 	sta VREG_PORT1
 
+:	lda r8H			; if whole last byte is occupied (mask==0)
+	bne :+
+	inc r4L			; then increase number of full cards to write
+
 :	ldx r4L			; how many full cards?
 	beq @2			; same byte that we already did, skip over
 
