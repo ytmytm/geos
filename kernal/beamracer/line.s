@@ -74,14 +74,14 @@ GetCardsDistance:
 ;     r5       adjusted to first card of X
 ;     r6       adjusted to first card of X
 AdjustR5R6ToX:
-	lsr r3H
-	ror r3L
-	lsr r3H
-	ror r3L
-	lsr r3H
-	ror r3L
-
 	lda r3L
+	lsr r3H
+	ror
+	lsr
+	lsr
+	sta r3L
+
+	;lda r3L
 	add r5L
 	sta r5L
 	bcc :+
@@ -89,7 +89,7 @@ AdjustR5R6ToX:
 
 :	lda r3L
 	add r6L
-	sta r5L
+	sta r6L
 	bcc :+
 	inc r6H
 :	rts
