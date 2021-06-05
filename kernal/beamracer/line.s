@@ -562,94 +562,87 @@ Read80Help:
 ; Destroyed: a, x, y, r4 - r8, r11
 ;---------------------------------------------------------------
 _VerticalLine:
-	sta r8L
-.ifdef bsw128
-	jsr _TempHideMouse
-	ldx #r4
-	jsr _NormalizeX
-	bbsf 7, graphMode, VLin80
-.endif
-	PushB r4L
+	sta r8L			; pattern
+
+	tax
+	PushB r8H
+	stx r8H
+
+	PushW r3
+	ldx r3L			; top Y
+	jsr _GetScanLine_BR	; -> r5,r6 line address
+	MoveW r4, r3
+	jsr AdjustR5R6ToX
+	PopW r3
+
+	lda r4L
 	and #%00000111
 	tax
-	lda BitMaskPow2Rev,x
+	lda BitMaskPow2Rev,x	; bit of interest
+	sta r7L
+	eor #$ff		; bits to protect
 	sta r7H
-	lda r4L
+
+	START_IO
+
+	lda VREG_CONTROL
 	and #%11111000
-	sta r4L
-	ldy #0
-	ldx r3L
-@1:	stx r7L
-	jsr _GetScanLine
-	AddW r4, r5
-	AddW r4, r6
-	lda r7L
+	ora #br_screen_bank
+	ora #(1 << CONTROL_PORT_READ_ENABLE_BIT)
+	sta VREG_CONTROL
+	LoadB VREG_STEP0, 40	; advance one line every r/w
+	sta VREG_STEP1
+
+	; pass 1 foreground
+	; read on port 0, write to port 1
+	MoveB r5L, VREG_ADR0
+	MoveB r5H, VREG_ADR0+1
+	MoveB r5L, VREG_ADR1
+	MoveB r5H, VREG_ADR1+1
+	ldy r3L
+@1:	tya
 	and #%00000111
 	tax
 	lda BitMaskPow2Rev,x
 	and r8L
-	bne @2
-	lda r7H
-	eor #$FF
-	and (r6),Y
-	bra @3
-@2:	lda r7H
-	ora (r6),Y
-@3:	sta (r6),Y
-	sta (r5),Y
-	ldx r7L
-	inx
-	cpx r3H
-	beq @1
+	beq :+
+	lda #$ff
+:	and r7L
+	sta r8H
+	lda VREG_PORT0
+	and r7H
+	ora r8H
+	sta VREG_PORT1
+	iny
+	cpy r3H
+	bne @1
 	bcc @1
-	PopB r4L
+
+	; pass 2 background
+	MoveB r6L, VREG_ADR0
+	MoveB r6H, VREG_ADR0+1
+	MoveB r6L, VREG_ADR1
+	MoveB r6H, VREG_ADR1+1
+	ldy r3L
+@2:	tya
+	and #%00000111
+	tax
+	lda BitMaskPow2Rev,x
+	and r8L
+	beq :+
+	lda #$ff
+:	and r7L
+	sta r8H
+	lda VREG_PORT0
+	and r7H
+	ora r8H
+	sta VREG_PORT1
+	iny
+	cpy r3H
+	bne @2
+	bcc @2
+
+	END_IO
+	PopB r8H
 	rts
 
-.ifdef bsw128
-VLin80:
-	PushW r3
-	ldx r3L
-	stx r7L
-	jsr _GetScanLine
-	MoveW r4, r3
-	jsr GetLeftXAddress
-	lda BitMaskPow2Rev,x
-	sta r7H
-	PopW r3
-	ldx r3L
-@1:	stx r7L
-	txa
-	and #$07
-	tax
-	lda BitMaskPow2Rev,x
-	and r8L
-	bne @2
-	lda r7H
-	eor #$FF
-	jsr LF4B7
-	bra @3
-@2:	lda r7H
-	jsr LF4A7
-@3:	jsr StaBackbuffer80
-	jsr StaFrontbuffer80
-	ldx r7L
-	jsr @4
-	cpx r3H
-	beq @1
-	bcc @1
-	rts
-@4:	AddVB SCREENPIXELWIDTH/8, r5L
-	sta r6L
-	bcc @5
-	inc r5H
-	inc r6H
-@5:	inx
-	cpx #100
-	beq @6
-	rts
-@6:	bbrf 6, dispBufferOn, @7
-	AddVB 33, r6H
-	bbsf 7, dispBufferOn, @7
-	sta r5H
-@7:	rts
-.endif
