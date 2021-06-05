@@ -83,11 +83,13 @@ AdjustR5R6ToX:
 
 	lda r3L
 	add r5L
+	sta r5L
 	bcc :+
 	inc r5H
 
 :	lda r3L
 	add r6L
+	sta r5L
 	bcc :+
 	inc r6H
 :	rts
@@ -114,8 +116,9 @@ _HorizontalLine:
 	PushW r3
 	PushW r4
 	START_IO
-	jsr PrepareXCoord_BR	; --> r5/r6 start of line, r8L/r8H pattern left, pattern right
-	jsr AdjustR5R6ToX	; --> r5/r6 card with left X data
+	jsr PrepareXCoord_BR	; --> r5/r6 set to start of line, r8L/r8H bit pattern to protect on left, pattern right
+	jsr GetCardsDistance    ; --> r4L set to card distance
+	jsr AdjustR5R6ToX	; --> r5/r6 adjusted to card with left X data, r3 set to r3 div 8
 
 	lda VREG_CONTROL
 	and #%11111000
@@ -132,10 +135,10 @@ _HorizontalLine:
 	lda r8L
 	beq :+			; skip handling of the first byte (r8L==0?)
 
-	;lda r8L		; handle left byte (value already in A)
-	eor #$ff		; reverse bitmask
-	and r7L			; take only pattern bits that we need
-	sta r5L			; temporary
+				; handle left byte (value already in A)
+	eor #$ff		; reverse screen protection bitmask
+	and r7L			; take from patternbits that we need
+	sta r5L			; keep as temporary
 
 	ldx #1
 	lda VREG_PORT0
@@ -150,9 +153,7 @@ _HorizontalLine:
 	stx VREG_STEP1
 	sta VREG_PORT1
 
-:	jsr GetCardsDistance
-
-	ldx r4L
+:	ldx r4L			; how many full cards?
 	beq @2			; same byte that we already did, skip over
 
 	LoadB VREG_STEP0, 1	; increase address on write
@@ -166,7 +167,7 @@ _HorizontalLine:
 :	ldy VREG_REP0
 	bne :-			; wait until done
 
-@1:	inx
+@1:	inx			; how many full cards? (restore r4L value)
 	sta VREG_PORT1		; write once
 	dex
 	beq @2
