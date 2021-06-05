@@ -127,6 +127,7 @@ config_inc = 1
 	br_screen_bank = 7 ;7
 	; Beamracer screen base address
 	br_screen_base = $A000 ;$A000
+	br_backscreen_base = $C000
 
 	; GEOS2000
 	; makes drawing dialog boxes much faster, might cause visual mess

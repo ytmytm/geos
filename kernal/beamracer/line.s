@@ -10,65 +10,39 @@
 .include "kernal.inc"
 .include "c64.inc"
 
+.include "kernal/beamracer/beamracer-vlib/vasyl.s"
+
 .import BitMaskPow2Rev
 .import BitMaskLeadingSet
 .import BitMaskLeadingClear
 .import _GetScanLine
-.ifdef bsw128
-.import _TempHideMouse
-.import _NormalizeX
-.import VDCFillr4LA
-.import LF4B7
-.import ShareTop
-.import LF5BF
-.import ILin80_Help
-.import LF522
-.import ShareTopBot
-.import LF558
-.import LF4A7
-.import CmpWR3R4
-.import StaFrontbuffer80
-.import StaBackbuffer80
-.import GetLeftXAddress
-.endif
-
-.ifndef beamracer
+.import _GetScanLine_BR
 
 .global ImprintLine
 .global _HorizontalLine
 .global _InvertLine
 .global _RecoverLine
 .global _VerticalLine
-.ifdef bsw128
-.global HLinEnd2
-.endif
 
 .segment "graph2a"
 
+; in: r11L - y position
+;     r3   - x left
+;     r4   - x right
+; out:
+;     r5   - line address on foreground
+;     r6   - line address on background
+;     r8L  - bitmask for first byte on the left (bits set on the left)
+;     r8H  - bitmask for last byte on the right (bits set on the right)
+;
+PrepareXCoord_BR:
+        ldx r11L
+        jsr _GetScanLine_BR
+        bra :+
 PrepareXCoord:
-.ifdef bsw128
-	jsr _TempHideMouse
-	ldx #r3
-	jsr _NormalizeX
-	ldx #r4
-	jsr _NormalizeX
-	lda r4L
-	ldx r4H
-	cpx r3H
-	bne @1
-	cmp r3L
-@1:	bcs @2
-	ldy r3H
-	sty r4H
-	ldy r3L
-	sty r4L
-	sta r3L
-	stx r3H
-@2:
-.endif
 	ldx r11L
 	jsr _GetScanLine
-	lda r4L
+:	lda r4L
 	and #%00000111
 	tax
 	lda BitMaskLeadingClear,x
@@ -78,101 +52,46 @@ PrepareXCoord:
 	tax
 	lda BitMaskLeadingSet,x
 	sta r8L
-.ifdef bsw128
-	bbrf 7, graphMode, @3
-	jsr GetLeftXAddress
-@3:
-.endif
-	lda r3L
-	and #%11111000
-	sta r3L
-	lda r4L
-	and #%11111000
-	sta r4L
-.ifdef bsw128
-	cmp r3L
-	bne @4
-	lda r4H
-	cmp r3H
-@4:
-.endif
 	rts
 
-.ifdef wheels_size
-.import WheelsTemp
-_HorizontalLine:
-	sta r7L
-	lda #0
-	.byte $2c
-_InvertLine:
-	lda #$80
-	sta WheelsTemp
-	PushW r3
-	PushW r4
-	jsr PrepareXCoord
-	ldy r3L
-	lda r3H
-	beq @1
-	inc r5H
-	inc r6H
-@1:	lda r3H
-	cmp r4H
-	bne @2
-	lda r3L
-	cmp r4L
-@2:	beq @7
-	jsr LineHelp2
+; in:  r3, r4   X coords (start,end)
+; out: r4L      distance in cards (distance divided by 8)
+GetCardsDistance:
+	SubW r3, r4
+	lsr r4H
+	ror r4L
+	lsr r4H
+	ror r4L
+	lsr r4L
 	lda r8L
-	bit WheelsTemp
-	bmi @3
-	jsr LineCommon
-	bra @4
-@3:	eor (r5),y
-@4:	bit WheelsTemp
-	bpl @5
-	eor #$FF
-@5:	sta (r6),y
-	sta (r5),y
-	tya
-	add #8
-	tay
-	bcc @6
-	inc r5H
-	inc r6H
-@6:	dec r4L
-	beq @8
-	lda r7L
-	bit WheelsTemp
-	bpl @4
-	lda (r5),y
-	bra @4
-@7:	lda r8L
-	ora r8H
-	bra @9
-@8:	lda r8H
-@9:	bit WheelsTemp
-	bmi @A
-	jsr LineCommon
-	jmp @B
-@A:	eor #$FF
-	eor (r5),y
-@B:	sta (r6),y
-	sta (r5),y
-LineEnd:
-	PopW r4
-	PopW r3
 	rts
 
-LineCommon:
-	sta r11H
-	and (r6),y
-	sta r7H
-	lda r11H
-	eor #$FF
-	and r7L
-	ora r7H
-	rts
-.else
+; in: r3       X coord (0-319)
+;     r5       line address on foreground
+;     r6       line address on background
+; out:
+;     r3       divided by 8
+;     r5       adjusted to first card of X
+;     r6       adjusted to first card of X
+AdjustR5R6ToX:
+	lsr r3H
+	ror r3L
+	lsr r3H
+	ror r3L
+	lsr r3H
+	ror r3L
+
+	lda r3L
+	add r5L
+	bcc :+
+	inc r5H
+
+:	lda r3L
+	add r6L
+	bcc :+
+	inc r6H
+:	rts
+
 ;---------------------------------------------------------------
 ; HorizontalLine                                          $C118
 ;
@@ -183,138 +102,115 @@ LineCommon:
 ; Return:    r11L unchanged
 ; Destroyed: a, x, y, r5 - r8, r11
 ;---------------------------------------------------------------
+
+; speedups when $a000-$bf40 is free:
+; - scanline offsets (200 * 2 = 400 bytes)
+; - card offsets (320 * 2 = 640 bytes)
+; - collapse PrepareXCoord+AdjustR5R6ToX into one function (CALC in cc65 TGI: https://github.com/cc65/cc65/blob/master/libsrc/c128/tgi/c128-vdc.s)
+; - can PORT0/PORT1 repeated writes go in parallel?
+
 _HorizontalLine:
-	sta r7L
+	sta r7L			; temporary for pattern
 	PushW r3
 	PushW r4
-	jsr PrepareXCoord
-.ifdef bsw128
-	php
-	bbsf 7, graphMode, HLin80
-.endif
-	ldy r3L
-	lda r3H
-	beq @1
-	inc r5H
-	inc r6H
-@1:
-.ifdef bsw128
-	plp
-	beq @4
-	jsr GetCardsDistance
-.else
-	CmpW r3, r4
-	beq @4
-	SubW r3, r4
-	lsr r4H
-	ror r4L
-	lsr r4L
-	lsr r4L
-	lda r8L
-.endif
-	jsr HLineHelp
-@2:	sta (r6),Y
-	sta (r5),Y
-	tya
-	addv 8
-	tay
-	bcc @3
-	inc r5H
-	inc r6H
-@3:	dec r4L
-	beq @5
-	lda r7L
-	bra @2
-@4:	lda r8L
-	ora r8H
-	bra @6
+	START_IO
+	jsr PrepareXCoord_BR	; --> r5/r6 start of line, r8L/r8H pattern left, pattern right
+	jsr AdjustR5R6ToX	; --> r5/r6 card with left X data
 
-@5:	lda r8H
-@6:	jsr HLineHelp
-HLinEnd1:
-	sta (r6),Y
-	sta (r5),Y
-HLinEnd2:
+	lda VREG_CONTROL
+	and #%11111000
+	ora #br_screen_bank
+	ora #(1 << CONTROL_PORT_READ_ENABLE_BIT)
+	sta VREG_CONTROL
+	MoveB r5L, VREG_ADR0
+	MoveB r5H, VREG_ADR0+1
+	MoveB r6L, VREG_ADR1
+	MoveB r6H, VREG_ADR1+1
+	LoadB VREG_STEP0, 0	; don't advance for the first byte (there will be read/write)
+	sta VREG_STEP1
+
+	lda r8L
+	beq :+			; skip handling of the first byte (r8L==0?)
+
+	;lda r8L		; handle left byte (value already in A)
+	eor #$ff		; reverse bitmask
+	and r7L			; take only pattern bits that we need
+	sta r5L			; temporary
+
+	ldx #1
+	lda VREG_PORT0
+	and r8L			; clear pattern bits
+	ora r5L			; add patern
+	stx VREG_STEP0		; increase address on write
+	sta VREG_PORT0
+
+	lda VREG_PORT1
+	and r8L
+	ora r5L
+	stx VREG_STEP1
+	sta VREG_PORT1
+
+:	jsr GetCardsDistance
+
+	ldx r4L
+	beq @2			; same byte that we already did, skip over
+
+	LoadB VREG_STEP0, 1	; increase address on write
+	sta VREG_STEP1
+
+	lda r7L			; pattern
+	sta VREG_PORT0		; write once
+	dex
+	beq @1			; skip if nothing more
+	stx VREG_REP0		; repeat this many times
+:	ldy VREG_REP0
+	bne :-			; wait until done
+
+@1:	inx
+	sta VREG_PORT1		; write once
+	dex
+	beq @2
+	stx VREG_REP1
+:	ldy VREG_REP1
+	bne :-
+
+@2:	ldx r8H			; anything for the last byte?
+	beq @end
+
+	LoadB VREG_STEP0, 0	; don't increase address on write
+	sta VREG_STEP1
+
+	txa			; handle right byte
+	eor #$ff		; reverse bitmask
+	and r7L			; take only pattern bits that we need
+	sta r5L			; temporary
+
+	lda VREG_PORT0
+	and r8H			; clear pattern bits
+	ora r5L			; add patern
+	sta VREG_PORT0
+
+	lda VREG_PORT1
+	and r8H
+	ora r5L
+	sta VREG_PORT1
+
+@end:
+	rmbf CONTROL_PORT_READ_ENABLE_BIT, VREG_CONTROL ; clear to avoid 'weird issues' 
+	END_IO
 	PopW r4
 	PopW r3
 	rts
 
-.ifdef bsw128
-HLin80:	plp
-	beq @4
-	jsr GetCardsDistance
-	jsr HLineHelp3
-	jsr StaLeftByte80
-	beq @5
-	bbrf 6, dispBufferOn, @2
-	ldy r4L
-	lda r7L
-@1:	dey
-	sta (r6),y
-	cpy #0
-	bne @1
-@2:	lda r7L
-	jsr VDCFillr4LA
-	lda r5L
-	clc
-	adc r4L
-	sta r5L
-	sta r6L
-	bcc @3
-	inc r5H
-	inc r6H
-@3:	bra @5
-@4:	lda r8L
-	ora r8H
-	bra @6
-@5:	lda r8H
-@6:	jsr HLineHelp3
-	jsr StaBackbuffer80
-	jsr StaFrontbuffer80
-	jmp HLinEnd2
-
-;!!! used only once
-StaLeftByte80:
-	jsr StaBackbuffer80
-	jsr StaFrontbuffer80
-	inc r6L
-	inc r5L
-	bne @1
-	inc r5H
-	inc r6H
-@1:	dec r4L
-	rts
-
-; in:  r3, r4   X coords
-; out: r4       distance in cards
-GetCardsDistance:
-	SubW r3, r4
-	lsr r4H
-	ror r4L
-	lsr r4H
-	ror r4L
-	lsr r4L
-	lda r8L
-	rts
-.endif
-
-HLineHelp:
-	sta r11H
-	and (r6),Y
-HLineHelp2:
-	sta r7H
-	lda r11H
-	eor #$FF
-	and r7L
-	ora r7H
-	rts
-
-.ifdef bsw128
-HLineHelp3:
-	sta r11H
-	jsr LF4B7
-	bra HLineHelp2
-.endif
+; called from below
+HLinEnd1:
+    sta (r6),Y
+    sta (r5),Y
+HLinEnd2:
+LineEnd:
+    PopW r4
+    PopW r3
+    rts
 
 ;---------------------------------------------------------------
 ; InvertLine                                              $C11B
@@ -419,35 +315,6 @@ ILin80:	plp
 @7:	bra @5
 @8:	jsr ShareTop
 	jmp HLinEnd2
-.endif
-
-ImprintLine:
-	PushW r3
-	PushW r4
-	PushB dispBufferOn
-	ora #ST_WR_FORE | ST_WR_BACK
-	sta dispBufferOn
-	jsr PrepareXCoord
-.ifdef bsw128
-	bbrf 7, graphMode, @1
-	jmp Read80Line
-@1:
-.else
-	PopB dispBufferOn
-.endif
-	lda r5L
-	ldy r6L
-	sta r6L
-	sty r5L
-	lda r5H
-	ldy r6H
-	sta r6H
-	sty r5H
-.ifdef bsw128
-	bra RLin0a
-.else
-	bra RLin0
-.endif
 .endif
 
 ;---------------------------------------------------------------
@@ -785,5 +652,3 @@ VLin80:
 	sta r5H
 @7:	rts
 .endif
-
-.endif ; beamracer

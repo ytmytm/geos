@@ -1,7 +1,8 @@
-; GEOS KERNAL by Berkeley Softworks
-; reverse engineered by Maciej Witkowiak, Michael Steil
 ;
 ; Graphics library: GetScanLine syscall
+;
+; Beamracer version
+; Maciej 'YTM/Elysium' Witkowiak
 
 .include "const.inc"
 .include "geossym.inc"
@@ -10,7 +11,50 @@
 .include "kernal.inc"
 .include "c64.inc"
 
-.ifndef beamracer
+.import DMult
+
+.global _GetScanLine_BR
+
+.segment "graph2n"
+
+;---------------------------------------------------------------
+; GetScanLine                                             $C13C
+;
+; Function:  Returns the address of the beginning of a scanline
+
+; Pass:      x   scanline nbr
+; Return:    r5  add of 1st byte of foreground scr
+;            r6  add of 1st byte of background scr
+; Destroyed: a
+;---------------------------------------------------------------
+_GetScanLine_BR:
+	txa
+	pha
+	sta r5L
+	LoadB r5H, 0
+	asl r5L
+	rol r5H				; *2
+	asl r5L
+	rol r5H				; *4
+	txa
+	add r5L
+	sta r5L
+	bcc :+
+	inc r5H				; *4+1 -> *5
+:	asl r5L
+	rol r5H				; *10
+	asl r5L
+	rol r5H				; *20
+	asl r5L
+	rol r5H				; *40
+
+	MoveW r5, r6
+	AddVW br_screen_base, r5
+	AddVW br_backscreen_base, r6
+	pla
+	tax
+	rts
+
 
 .global _GetScanLine
 
@@ -185,5 +229,3 @@ LineTabL:
 	.lobytes LineTab
 LineTabH:
 	.hibytes LineTab
-
-.endif ; beamracer

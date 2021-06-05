@@ -15,6 +15,8 @@
 .import i_Rectangle
 .import SetPattern
 
+.ifndef beamracer
+
 .global ClrScr
 
 .ifndef wheels
@@ -71,3 +73,5 @@ ClrScr:
 .endif
 
 .endif
+
+.endif ; beamracer

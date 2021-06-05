@@ -234,7 +234,10 @@ endif
 # code that belongs to beamracer only
 ifeq ($(VARIANT), beamracer)
 	KERNAL_SOURCES += \
-	kernal/beamracer/dlist.s 
+	kernal/beamracer/dlist.s \
+	kernal/beamracer/clrscr.s \
+	kernal/beamracer/line.s \
+	kernal/beamracer/scanline.s
 endif
 
 DRIVER_SOURCES= \

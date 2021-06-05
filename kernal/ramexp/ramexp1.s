@@ -130,6 +130,35 @@ DetectRamExp:
 	; we can start the display list
 	jsr br_dlist_activate
 	; anything else?
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+.import HorizontalLine
+        LoadW r3, 0
+        LoadW r4, 160
+        LoadB r11L, 0
+        lda #%11011101
+        jsr HorizontalLine
+        inc r11L
+        AddVB 15, r3
+        AddVB 20, r4
+        lda #%11011101
+        jsr HorizontalLine
+        inc r11L
+        inc r11L
+        AddVB 15, r3
+        AddVB 20, r4
+        lda #%11011101
+        jsr HorizontalLine
+        inc r11L
+        inc r11L
+        inc r11L
+        AddVB 15, r3
+        AddVB 20, r4
+        lda #%11011101
+        jsr HorizontalLine
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	rts
 
 ; copied from drv1541
