@@ -165,14 +165,10 @@ _HorizontalLine:
 	lda VREG_PORT1		; read from back buffer
 	and r8L			; clear pattern bits
 	ora r5L			; add patern
-	bbrf 7, dispBufferOn, @skipfore1
 	stx VREG_STEP0		; increase address on write
 	sta VREG_PORT0
-@skipfore1:
-	bbrf 6, dispBufferOn, @skipback1
 	stx VREG_STEP1
 	sta VREG_PORT1
-@skipback1:
 
 @wholecards:
 	lda r8H			; if whole last byte is occupied (mask==0)
@@ -185,7 +181,6 @@ _HorizontalLine:
 	LoadB VREG_STEP0, 1	; increase address on write
 	sta VREG_STEP1
 
-	bbrf 7, dispBufferOn, @skipfore2
 	lda r7L			; pattern
 	sta VREG_PORT0		; write once
 	dex
@@ -195,8 +190,6 @@ _HorizontalLine:
 	bne :-			; wait until done
 @1:	inx			; how many full cards? (restore r4L value)
 
-@skipfore2:
-	bbrf 6, dispBufferOn, @skipback2
 	lda r7L
 	sta VREG_PORT1		; write once
 	dex
@@ -205,7 +198,6 @@ _HorizontalLine:
 :	ldy VREG_REP1
 	bne :-
 
-@skipback2:
 @2:	ldx r8H			; anything for the last byte?
 	beq @end
 
@@ -220,12 +212,8 @@ _HorizontalLine:
 	lda VREG_PORT1		; read from back buffer
 	and r8H			; clear pattern bits
 	ora r5L			; add patern
-	bbrf 7, dispBufferOn, @skipfore3
 	sta VREG_PORT0
-@skipfore3:
-	bbrf 6, dispBufferOn, @skipback3
 	sta VREG_PORT1
-@skipback3:
 
 @end:
 HorizontalLineEnd:
@@ -272,14 +260,10 @@ _InvertLine:
 :	ldx #1
 	lda VREG_PORT0		; read from frontbuffer
 	eor r5L			; flip bits
-	bbrf 6, dispBufferOn, @skipback1
 	stx VREG_STEP1		; increase address on write
 	sta VREG_PORT1
-@skipback1:
-	bbrf 7, dispBufferOn, @skipfront1
 	stx VREG_STEP0
 	sta VREG_PORT0
-@skipfront1:
 
 @wholecards:
 	lda r8H			; if whole last byte is occupied (mask==0)
@@ -295,14 +279,10 @@ _InvertLine:
 	iny			; Y=1
 	lda VREG_PORT0		; read from frontbuffer
 	eor #$ff
-	bbrf 6, dispBufferOn, @skipback2
 	sty VREG_STEP1		; advance on write
 	sta VREG_PORT1
-@skipback2:
-	bbrf 7, dispBufferOn, @skipfront2
 	sty VREG_STEP0		; advance on write
 	sta VREG_PORT0
-@skipfront2:
 	dey			; Y=0
 	dex
 	bne :-			; XXX bug: when "bpl" desktop menu #1/#3 have one card too much inverted; when "bne" deskotp menu #2 has one card too much inverted
@@ -319,12 +299,8 @@ _InvertLine:
 
 	lda VREG_PORT0		; read from frontbuffer
 	eor r5L			; flip bits
-	bbrf 6, dispBufferOn, @skipback3
 	sta VREG_PORT1
-@skipback3:
-	bbrf 7, dispBufferOn, @skipfront3
 	sta VREG_PORT0
-@skipfront3:
 @end:
 	jmp HorizontalLineEnd
 
@@ -606,7 +582,6 @@ _VerticalLine:
 	sta VREG_STEP1
 
 	; pass 1 background
-	bbrf 6, dispBufferOn, @skipback
 	; read on port 0, write to port 1
 	MoveB r6L, VREG_ADR0	; read from background
 	MoveB r6H, VREG_ADR0+1
@@ -631,33 +606,29 @@ _VerticalLine:
 	bne @1
 	bcc @1
 
-@skipback:
-	; pass 2 foreground
-	bbrf 7, dispBufferOn, @skipfore
+	; pass 2 copy from background to foreground
+	CmpW r5, r6
+	beq @end
 	MoveB r6L, VREG_ADR0	; read from background
 	MoveB r6H, VREG_ADR0+1
 	MoveB r5L, VREG_ADR1	; store to foreground
 	MoveB r5H, VREG_ADR1+1
-	ldy r3L
-@2:	tya
-	and #%00000111
-	tax
-	lda BitMaskPow2Rev,x
-	and r8L
-	beq :+
-	lda #$ff
-:	and r7L
-	sta r8H
-	lda VREG_PORT0
-	and r7H
-	ora r8H
-	sta VREG_PORT1
-	iny
-	cpy r3H
-	bne @2
-	bcc @2
 
-@skipfore:
+	lda VREG_CONTROL
+	ora #CONTROL_PORT_MODE_COPY
+	sta VREG_CONTROL
+
+	lda r3L
+	sta VREG_REP1		; start hardware copy
+
+:	lda VREG_REP1
+	bne :-
+
+@end:
+	lda VREG_CONTROL
+	and #%00101111		; clear copy and read enable bits
+	sta VREG_CONTROL
+
 	END_IO
 	PopB r8H
 	rts
