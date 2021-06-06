@@ -11,8 +11,6 @@
 .include "kernal.inc"
 .include "c64.inc"
 
-.import DMult
-
 .global _GetScanLine_BR
 
 .segment "graph2n"
