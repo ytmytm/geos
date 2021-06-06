@@ -216,17 +216,11 @@ _HorizontalLine:
 @end:
 HorizontalLineEnd:
 	rmbf CONTROL_PORT_READ_ENABLE_BIT, VREG_CONTROL ; clear to avoid 'weird issues' 
+HorizontalLineEnd2:
 	END_IO
 	PopW r4
 	PopW r3
 	rts
-
-; called from below
-HLinEnd2:
-LineEnd:
-    PopW r4
-    PopW r3
-    rts
 
 ;---------------------------------------------------------------
 ; InvertLine                                              $C11B
@@ -311,7 +305,6 @@ _InvertLine:
 ;---------------------------------------------------------------
 .segment "graph2a"
 _RecoverLine:
-.ifdef wheels_size
 	lda #$18 ; clc
 	.byte $2c
 ImprintLine:
@@ -322,11 +315,12 @@ ImprintLine:
 	PushB dispBufferOn
 	ora #ST_WR_FORE | ST_WR_BACK
 	sta dispBufferOn
-	jsr PrepareXCoord
+	START_IO
+	jsr SetupBeamRacerAddresses	; PORT0/PORT1 set to r5/r6 and step is 0
 	PopB dispBufferOn
 @1:	clc
-	bcc @2
-	lda r5L
+	bcc :+
+	lda r5L		; swap source/target for imprint/recover
 	ldy r6L
 	sta r6L
 	sty r5L
@@ -334,204 +328,72 @@ ImprintLine:
 	ldy r6H
 	sta r6H
 	sty r5H
-@2:	ldy r3L
-	lda r3H
-	beq @3
-	inc r5H
-	inc r6H
-@3:	CmpW r3, r4
-	beq @6
-	jsr LineHelp2
+
+:	MoveB r6L, VREG_ADR0	; read from here
+	MoveB r6H, VREG_ADR0+1
+	MoveB r5L, VREG_ADR1	; store here
+	MoveB r5H, VREG_ADR1+1
+
 	lda r8L
-	jsr LineHelp1
-@4:	tya
-	add #8
-	tay
-	bcc @5
-	inc r5H
-	inc r6H
-@5:	dec r4L
-	beq @7
-	lda (r6),y
-	sta (r5),y
-	bra @4
-@6:	lda r8L
-	ora r8H
-	bra @8
-@7:	lda r8H
-@8:	jsr LineHelp1
-	jmp LineEnd
+	beq @wholecards		; skip handling of the first byte
+	eor #$ff		; reverse screen protection bitmask
+	sta r5L			; keep as temporary
+	lda r4L
+	beq :+
+	dec r4L			; decrease number of full cards
 
-LineHelp1:
-	sta r7L
-	and (r5),y
-	sta r7H
-	lda r7L
-	eor #$FF
-	and (r6),y
-	ora r7H
-	sta (r5),y
-	rts
+:	ldx #1
+	lda VREG_PORT1		; read from target
+	and r5L			; clear unprotected bits
+	sta r5H			; temporary
+	stx VREG_STEP0		; increase address on write
+	lda VREG_PORT0		; read from source
+	and r8L			; clear protected bits
+	ora r5H			; flip bits from target
+	stx VREG_STEP1		; increase address on write
+	sta VREG_PORT1
 
-LineHelp2:
-	SubW r3, r4
-	lsr r4H
-	ror r4L
-	lsr r4L
-	lsr r4L
-	rts
-.else
-	PushW r3
-	PushW r4
-	PushB dispBufferOn
-	ora #ST_WR_FORE | ST_WR_BACK
-	sta dispBufferOn
-	jsr PrepareXCoord
-.ifdef bsw128
-	bbrf 7, graphMode, @X
-	jmp Write80Line
-@X:
-.endif
-RLin0a:
-	PopB dispBufferOn
-RLin0:
-	ldy r3L
-	lda r3H
-	beq @1
-	inc r5H
-	inc r6H
-@1:
-.ifdef bsw128
-	jsr CmpWR3R4
-	beq @4
-	jsr GetCardsDistance
-.else
-	CmpW r3, r4
-	beq @4
-	SubW r3, r4
-	lsr r4H
-	ror r4L
-	lsr r4L
-	lsr r4L
-	lda r8L
-.endif
-	jsr RecLineHelp
-@2:	tya
-	addv 8
-	tay
-	bcc @3
-	inc r5H
-	inc r6H
-@3:	dec r4L
-	beq @5
-	lda (r6),Y
-	sta (r5),Y
-	bra @2
-@4:	lda r8L
-	ora r8H
-	bra @6
-@5:	lda r8H
-@6:	jsr RecLineHelp
-	jmp HLinEnd2
+@wholecards:
+	lda r8H			; if whole last byte is occupied (mask==0)
+	bne :+
+	inc r4L			; then increase number of full cards to write
 
-.ifdef bsw128
-Read80Line:
-	jsr CmpWR3R4
-	beq @3
-	jsr GetCardsDistance
-	jsr Read80Help
-	iny
-@1:	dec r4L
-	beq @4
-@2:	bit vdcreg
-	bpl @2
-	lda vdcdata
-	sta (r6),y
-	iny
-	bne @1
-@3:	lda r8L
-	ora r8H
-	bra @6
-@4:	tya
-	clc
-	adc r5L
-	sta r5L
-	sta r6L
-	bcc @5
-	inc r5H
-	inc r6H
-@5:	lda r8H
-@6:	jsr Read80Help
-	PopB dispBufferOn
-	jmp HLinEnd2
+:	ldx r4L			; how many full cards?
+	beq @2			; same byte that we already did, skip over
 
-Write80Line:
-	jsr CmpWR3R4
-	beq @3
-	jsr GetCardsDistance
-	jsr Write80Help
-	iny
-@1:	dec r4L
-	beq @4
-	lda (r6),y
-@2:	bit vdcreg
-	bpl @2
-	sta vdcdata
-	iny
-	bne @1
-@3:	lda r8L
-	ora r8H
-	bra @6
-@4:	tya
-	clc
-	adc r5L
-	sta r5L
-	sta r6L
-	bcc @5
-	inc r5H
-	inc r6H
-@5:	lda r8H
-@6:	jsr Write80Help
-	PopB dispBufferOn
-	jmp HLinEnd2
-.endif
+	lda VREG_CONTROL
+	ora #CONTROL_PORT_MODE_COPY
+	sta VREG_CONTROL
+	LoadB VREG_STEP0, 1
+	sta VREG_STEP1
 
-RecLineHelp:
-	sta r7L
-	and (r5),Y
-	sta r7H
-	lda r7L
-	eor #$FF
-	and (r6),Y
-	ora r7H
-	sta (r5),Y
-	rts
-.endif
+	stx VREG_REP1		; start hardware copy from PORT0 to PORT1
+:	lda VREG_REP1
+	bne :-
 
-.ifdef bsw128
-Write80Help:
-	sta r7L
-	jsr LF558
-	sta r7H
-	lda r7L
-	eor #$FF
-	ldy #0
-	and (r6),y
-	ora r7H
-	jmp StaFrontbuffer80
+@2:	ldx r8H			; anything for the last byte?
+	beq @end
 
-Read80Help:
-	sta r7L
-	ldy #0
-	and (r6),y
-	sta r7H
-	lda r7L
-	eor #$FF
-	jsr LF558
-	ora r7H
-	sta (r6),y
-	rts
-.endif
+	LoadB VREG_STEP0, 0	; don't increase address on write
+	sta VREG_STEP1
+
+	txa			; handle right byte
+	eor #$ff		; reverse bitmask
+	sta r5L			; temporary
+
+	lda VREG_PORT1
+	and r5L
+	sta r5H
+	lda VREG_PORT0
+	and r8H
+	ora r5H
+	sta VREG_PORT1
+
+@end:
+	lda VREG_CONTROL
+	and #%00101111		; clear copy and read enable bits
+	sta VREG_CONTROL
+	jmp HorizontalLineEnd2
 
 ;---------------------------------------------------------------
 ; VerticalLine                                            $C121
