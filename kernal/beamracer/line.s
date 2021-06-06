@@ -24,7 +24,6 @@
 .global _RecoverLine
 .global _VerticalLine
 
-.segment "graph2a"
 
 ; in: r11L - y position
 ;     r3   - x left
@@ -35,6 +34,8 @@
 ;     r8L  - bitmask for first byte on the left (bits set on the left)
 ;     r8H  - bitmask for last byte on the right (bits set on the right)
 ;
+;.segment "graph2a"
+.segment "load1b"
 PrepareXCoord_BR:
         ldx r11L
         jsr _GetScanLine_BR
@@ -56,6 +57,8 @@ PrepareXCoord:
 
 ; in:  r3, r4   X coords (start,end)
 ; out: r4L      distance in cards (distance divided by 8)
+;.segment "graph2a"
+.segment "load1b"
 GetCardsDistance:
 	SubW r3, r4
 	lsr r4H
@@ -73,6 +76,7 @@ GetCardsDistance:
 ;     r3       divided by 8
 ;     r5       adjusted to first card of X
 ;     r6       adjusted to first card of X
+.segment "graph2a"
 AdjustR5R6ToX:
 	lda r3L
 	lsr r3H
@@ -111,15 +115,20 @@ AdjustR5R6ToX:
 ; - collapse PrepareXCoord+AdjustR5R6ToX into one function (CALC in cc65 TGI: https://github.com/cc65/cc65/blob/master/libsrc/c128/tgi/c128-vdc.s)
 ; - can PORT0/PORT1 repeated writes go in parallel?
 
-_HorizontalLine:
-	sta r7L			; temporary for pattern
-	PushW r3
-	PushW r4
-	START_IO
+; in:	r5 - foreground address
+;	r6 - background address
+; out:
+;	PORT0 set to r5
+;	PORT1 set to r6
+;	STEP0/STEP1 set to 0
+;	CONTROL set to bank and read/write operation of ports
+; destroys: a
+;
+.segment "graph2a"
+SetupBeamRacerAddresses:
 	jsr PrepareXCoord_BR	; --> r5/r6 set to start of line, r8L/r8H bit pattern to protect on left, pattern right
 	jsr GetCardsDistance    ; --> r4L set to card distance
 	jsr AdjustR5R6ToX	; --> r5/r6 adjusted to card with left X data, r3 set to r3 div 8
-
 	lda VREG_CONTROL
 	and #%11111000
 	ora #br_screen_bank
@@ -131,16 +140,28 @@ _HorizontalLine:
 	MoveB r6H, VREG_ADR1+1
 	LoadB VREG_STEP0, 0	; don't advance for the first byte (there will be read/write)
 	sta VREG_STEP1
+	rts
+
+.segment "graph2a"
+_HorizontalLine:
+	sta r7L			; temporary for pattern
+	PushW r3
+	PushW r4
+	START_IO
+	jsr SetupBeamRacerAddresses
 
 	lda r8L
-	beq :+			; skip handling of the first byte (r8L==0?)
+	beq @wholecards		; skip handling of the first byte (r8L==0?)
 
 				; handle left byte (value already in A)
 	eor #$ff		; reverse screen protection bitmask
 	and r7L			; take from patternbits that we need
 	sta r5L			; keep as temporary
+	lda r4L
+	beq :+
+	dec r4L			; decrease number of full cards
 
-	ldx #1
+:	ldx #1
 	bbrf 7, dispBufferOn, @skipfore1
 	lda VREG_PORT0
 	and r8L			; clear pattern bits
@@ -157,9 +178,8 @@ _HorizontalLine:
 	sta VREG_PORT1
 @skipback1:
 
-	dec r4L			; decrease number of full cards
-
-:	lda r8H			; if whole last byte is occupied (mask==0)
+@wholecards:
+	lda r8H			; if whole last byte is occupied (mask==0)
 	bne :+
 	inc r4L			; then increase number of full cards to write
 
@@ -216,6 +236,7 @@ _HorizontalLine:
 @skipback3:
 
 @end:
+HorizontalLineEnd:
 	rmbf CONTROL_PORT_READ_ENABLE_BIT, VREG_CONTROL ; clear to avoid 'weird issues' 
 	END_IO
 	PopW r4
@@ -241,101 +262,87 @@ LineEnd:
 ; Return:    r3-r4 unchanged
 ; Destroyed: a, x, y, r5 - r8
 ;---------------------------------------------------------------
+.segment "graph2a"
 _InvertLine:
 	PushW r3
 	PushW r4
-	jsr PrepareXCoord
-.ifdef bsw128
-	php
-	bbsf 7, graphMode, ILin80
-.endif
-	ldy r3L
-	lda r3H
-	beq @1
-	inc r5H
-	inc r6H
-@1:
-.ifdef bsw128
-	plp
-	beq @4
-	jsr GetCardsDistance
-.else
-	CmpW r3, r4
-	beq @4
-	SubW r3, r4
-	lsr r4H
-	ror r4L
-	lsr r4L
-	lsr r4L
-	lda r8L
-.endif
-	eor (r5),Y
-@2:	eor #$FF
-	sta (r6),Y
-	sta (r5),Y
-	tya
-	addv 8
-	tay
-	bcc @3
-	inc r5H
-	inc r6H
-@3:	dec r4L
-	beq @5
-	lda (r5),Y
-	bra @2
-@4:	lda r8L
-	ora r8H
-	bra @6
-@5:	lda r8H
-@6:	eor #$FF
-	eor (r5),Y
-	jmp HLinEnd1
+	START_IO
+	jsr SetupBeamRacerAddresses	; PORT0/PORT1 set to r5/r6 and step is 0
 
-.ifdef bsw128
-ILin80:	plp
-	jsr GetCardsDistance
-	inc r4L
-	jsr ShareTopBot
-	PushW r5
-	ldx r4L
+	lda r8L
+	beq @wholecards		; skip handling of the first byte
+	eor #$ff		; reverse screen protection bitmask
+	sta r5L			; keep as temporary
+	lda r4L
+	beq :+
+	dec r4L			; decrease number of full cards
+
+:	ldx #1
+	bbrf 7, dispBufferOn, @skipfore1
+	lda VREG_PORT0
+	eor r5L			; flip bits
+	stx VREG_STEP0		; increase address on write
+	sta VREG_PORT0
+
+@skipfore1:
+	bbrf 6, dispBufferOn, @skipback1
+	lda VREG_PORT1
+	eor r5L
+	stx VREG_STEP1
+	sta VREG_PORT1
+@skipback1:
+
+@wholecards:
+	lda r8H			; if whole last byte is occupied (mask==0)
+	bne :+
+	inc r4L			; then increase number of full cards to write
+
+:	ldy #0
+	ldx r4L			; how many full cards?
+	beq @2			; same byte that we already did, skip over
+
+:	sty VREG_STEP0
+	sty VREG_STEP1
+	iny			; Y=1
+	bbrf 7, dispBufferOn, @skipfore2
+	lda VREG_PORT0
+	eor #$ff
+	sty VREG_STEP0		; advance on write
+	sta VREG_PORT0
+@skipfore2:
+	bbrf 6, dispBufferOn, @skipback2
+	lda VREG_PORT1
+	eor #$ff
+	sty VREG_STEP1		; advance on write
+	sta VREG_PORT1
+@skipback2:
+	dey			; Y=0
 	dex
-	bmi @4
-	jsr LF522
-	bra @2
-@1:	dex
-	bmi @4
-	jsr ILin80_Help
-@2:	eor #$FF
-	sta invertBuffer,x
-	inc r5L
-	bne @3
-	inc r5H
-@3:	bra @1
-@4:	PopW r5
-	lda invertBuffer
-	eor r8H
-	sta invertBuffer
-	ldx r4L
-	dex
-	bmi @8
-	lda invertBuffer,x
-	eor r8L
-	jsr StaFrontbuffer80
-	bra @6
-@5:	dex
-	bmi @8
-	lda invertBuffer,x
-	jsr LF5BF
-@6:	jsr StaBackbuffer80
-	inc r6L
-	inc r5L
-	bne @7
-	inc r6H
-	inc r5H
-@7:	bra @5
-@8:	jsr ShareTop
-	jmp HLinEnd2
-.endif
+	bne :-			; XXX bug: when "bpl" desktop menu #1/#3 have one card too much inverted; when "bne" deskotp menu #2 has one card too much inverted
+
+@2:	ldx r8H			; anything for the last byte?
+	beq @end
+
+	txa			; handle right byte
+	eor #$ff		; reverse bitmask
+	sta r5L			; temporary
+
+	sty VREG_STEP0		; Y=0 here, don't advance on read
+	sty VREG_STEP1
+
+	bbrf 7, dispBufferOn, @skipfore3
+	lda VREG_PORT0
+	eor r5L			; flip bits
+	sta VREG_PORT0
+
+@skipfore3:
+	bbrf 6, dispBufferOn, @skipback3
+	lda VREG_PORT1
+	eor r5L
+	sta VREG_PORT1
+@skipback3:
+@end:
+	jmp HorizontalLineEnd
 
 ;---------------------------------------------------------------
 ; RecoverLine                                             $C11E
@@ -347,6 +354,7 @@ ILin80:	plp
 ;            foreground sceen
 ; Destroyed: a, x, y, r5 - r8
 ;---------------------------------------------------------------
+.segment "graph2a"
 _RecoverLine:
 .ifdef wheels_size
 	lda #$18 ; clc
@@ -580,6 +588,7 @@ Read80Help:
 ; Return:    draw the line
 ; Destroyed: a, x, y, r4 - r8, r11
 ;---------------------------------------------------------------
+.segment "graph2a"
 _VerticalLine:
 	sta r8L			; pattern
 
