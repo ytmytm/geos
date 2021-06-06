@@ -15,7 +15,6 @@
 .import BitMaskPow2Rev
 .import BitMaskLeadingSet
 .import BitMaskLeadingClear
-.import _GetScanLine
 .import _GetScanLine_BR
 
 .global ImprintLine
@@ -39,11 +38,7 @@
 PrepareXCoord_BR:
         ldx r11L
         jsr _GetScanLine_BR
-        bra :+
-PrepareXCoord:
-	ldx r11L
-	jsr _GetScanLine
-:	lda r4L
+	lda r4L
 	and #%00000111
 	tax
 	lda BitMaskLeadingClear,x
@@ -61,12 +56,12 @@ PrepareXCoord:
 .segment "load1b"
 GetCardsDistance:
 	SubW r3, r4
+	lda r4L
 	lsr r4H
-	ror r4L
-	lsr r4H
-	ror r4L
-	lsr r4L
-	lda r8L
+	ror
+	lsr
+	lsr
+	sta r4L
 	rts
 
 ; in: r3       X coord (0-319)
@@ -199,8 +194,7 @@ _HorizontalLine:
 @2:	ldx r8H			; anything for the last byte?
 	beq @end
 
-	LoadB VREG_STEP0, 0	; don't increase address on write
-	sta VREG_STEP1
+	LoadB VREG_STEP1, 0	; don't increase address on write
 
 	txa			; handle right byte
 	eor #$ff		; reverse bitmask
@@ -230,6 +224,11 @@ HorizontalLineEnd2:
 ;            r11L y pos (0-199)
 ; Return:    r3-r4 unchanged
 ; Destroyed: a, x, y, r5 - r8
+;
+; If dispBufferOn is set to invert on the foreground and the background screen,
+; both the foreground and the background screen will get the inverted foreground
+; pixels. GEOS assumes both screens contain the same image
+;
 ;---------------------------------------------------------------
 .segment "graph2a"
 _InvertLine:
@@ -276,15 +275,12 @@ _InvertLine:
 	dex
 	bne :-			; XXX bug: when "bpl" desktop menu #1/#3 have one card too much inverted; when "bne" deskotp menu #2 has one card too much inverted
 
-@2:	ldx r8H			; anything for the last byte?
+@2:	lda r8H			; anything for the last byte?
 	beq @end
-
-	txa			; handle right byte
 	eor #$ff		; reverse bitmask
 	sta r5L			; temporary
 
 	sty VREG_STEP0		; Y=0 here, don't advance on read
-	sty VREG_STEP1
 
 	lda VREG_PORT0		; read from frontbuffer
 	eor r5L			; flip bits
@@ -302,6 +298,16 @@ _InvertLine:
 ; Return:    copies bits of line from background to
 ;            foreground sceen
 ; Destroyed: a, x, y, r5 - r8
+;
+;
+; RecoverLine:
+; The flags in dispBufferOn are ignored; the pixels are always copied to the
+; foreground screen regardless of the value in this variable.
+;
+; ImprintLine:
+; The flags in dispBufferOn are ignored; the pixels are always copied to the
+; background buffer regardless of the value in this variable
+
 ;---------------------------------------------------------------
 .segment "graph2a"
 _RecoverLine:
@@ -320,7 +326,7 @@ ImprintLine:
 	PopB dispBufferOn
 @1:	clc
 	bcc :+
-	lda r5L		; swap source/target for imprint/recover
+	lda r5L		; swap source/target for imprint
 	ldy r6L
 	sta r6L
 	sty r5L
@@ -374,8 +380,7 @@ ImprintLine:
 @2:	ldx r8H			; anything for the last byte?
 	beq @end
 
-	LoadB VREG_STEP0, 0	; don't increase address on write
-	sta VREG_STEP1
+	LoadB VREG_STEP1, 0	; don't increase address on write
 
 	txa			; handle right byte
 	eor #$ff		; reverse bitmask
@@ -475,8 +480,11 @@ _VerticalLine:
 	ora #CONTROL_PORT_MODE_COPY
 	sta VREG_CONTROL
 
-	lda r3L
-	sta VREG_REP1		; start hardware copy
+	lda r3H
+	sub r3L
+	tax
+	inx
+	stx VREG_REP1		; start hardware copy
 
 :	lda VREG_REP1
 	bne :-

@@ -60,14 +60,14 @@ _GetScanLine_BR:
 	AddVW br_backscreen_base, r6
 	bra @2
 
-@4:	bbrf 6, dispBufferOn, @5	; ST_WR_BACK
+@4:	bvc @5				; ST_WR_BACK
 	AddVW br_backscreen_base, r5
 	bra @1
 
-@5:	AddVW br_screen_base+$0F00, r5	; !ST_WR_FORE && !ST_WR_BACK ?!
+@5:	;AddVW br_screen_base+$0F00, r5	; !ST_WR_FORE && !ST_WR_BACK ?!
+	;bra @1
 .import Panic
 	jmp Panic
-	bra @1
 
 .global _GetScanLine
 
