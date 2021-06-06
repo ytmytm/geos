@@ -162,18 +162,14 @@ _HorizontalLine:
 	dec r4L			; decrease number of full cards
 
 :	ldx #1
-	bbrf 7, dispBufferOn, @skipfore1
-	lda VREG_PORT0
+	lda VREG_PORT1		; read from back buffer
 	and r8L			; clear pattern bits
 	ora r5L			; add patern
+	bbrf 7, dispBufferOn, @skipfore1
 	stx VREG_STEP0		; increase address on write
 	sta VREG_PORT0
-
 @skipfore1:
 	bbrf 6, dispBufferOn, @skipback1
-	lda VREG_PORT1
-	and r8L
-	ora r5L
 	stx VREG_STEP1
 	sta VREG_PORT1
 @skipback1:
@@ -221,17 +217,13 @@ _HorizontalLine:
 	and r7L			; take only pattern bits that we need
 	sta r5L			; temporary
 
-	bbrf 7, dispBufferOn, @skipfore3
-	lda VREG_PORT0
+	lda VREG_PORT1		; read from back buffer
 	and r8H			; clear pattern bits
 	ora r5L			; add patern
+	bbrf 7, dispBufferOn, @skipfore3
 	sta VREG_PORT0
-
 @skipfore3:
 	bbrf 6, dispBufferOn, @skipback3
-	lda VREG_PORT1
-	and r8H
-	ora r5L
 	sta VREG_PORT1
 @skipback3:
 
@@ -278,19 +270,16 @@ _InvertLine:
 	dec r4L			; decrease number of full cards
 
 :	ldx #1
-	bbrf 7, dispBufferOn, @skipfore1
-	lda VREG_PORT0
+	lda VREG_PORT0		; read from frontbuffer
 	eor r5L			; flip bits
-	stx VREG_STEP0		; increase address on write
-	sta VREG_PORT0
-
-@skipfore1:
 	bbrf 6, dispBufferOn, @skipback1
-	lda VREG_PORT1
-	eor r5L
-	stx VREG_STEP1
+	stx VREG_STEP1		; increase address on write
 	sta VREG_PORT1
 @skipback1:
+	bbrf 7, dispBufferOn, @skipfront1
+	stx VREG_STEP0
+	sta VREG_PORT0
+@skipfront1:
 
 @wholecards:
 	lda r8H			; if whole last byte is occupied (mask==0)
@@ -304,18 +293,16 @@ _InvertLine:
 :	sty VREG_STEP0
 	sty VREG_STEP1
 	iny			; Y=1
-	bbrf 7, dispBufferOn, @skipfore2
-	lda VREG_PORT0
+	lda VREG_PORT0		; read from frontbuffer
 	eor #$ff
-	sty VREG_STEP0		; advance on write
-	sta VREG_PORT0
-@skipfore2:
 	bbrf 6, dispBufferOn, @skipback2
-	lda VREG_PORT1
-	eor #$ff
 	sty VREG_STEP1		; advance on write
 	sta VREG_PORT1
 @skipback2:
+	bbrf 7, dispBufferOn, @skipfront2
+	sty VREG_STEP0		; advance on write
+	sta VREG_PORT0
+@skipfront2:
 	dey			; Y=0
 	dex
 	bne :-			; XXX bug: when "bpl" desktop menu #1/#3 have one card too much inverted; when "bne" deskotp menu #2 has one card too much inverted
@@ -330,17 +317,14 @@ _InvertLine:
 	sty VREG_STEP0		; Y=0 here, don't advance on read
 	sty VREG_STEP1
 
-	bbrf 7, dispBufferOn, @skipfore3
-	lda VREG_PORT0
+	lda VREG_PORT0		; read from frontbuffer
 	eor r5L			; flip bits
-	sta VREG_PORT0
-
-@skipfore3:
 	bbrf 6, dispBufferOn, @skipback3
-	lda VREG_PORT1
-	eor r5L
 	sta VREG_PORT1
 @skipback3:
+	bbrf 7, dispBufferOn, @skipfront3
+	sta VREG_PORT0
+@skipfront3:
 @end:
 	jmp HorizontalLineEnd
 
@@ -621,13 +605,13 @@ _VerticalLine:
 	LoadB VREG_STEP0, 40	; advance one line every r/w
 	sta VREG_STEP1
 
-	; pass 1 foreground
-	bbrf 7, dispBufferOn, @skipfore
+	; pass 1 background
+	bbrf 6, dispBufferOn, @skipback
 	; read on port 0, write to port 1
-	MoveB r5L, VREG_ADR0
-	MoveB r5H, VREG_ADR0+1
-	MoveB r5L, VREG_ADR1
-	MoveB r5H, VREG_ADR1+1
+	MoveB r6L, VREG_ADR0	; read from background
+	MoveB r6H, VREG_ADR0+1
+	MoveB r6L, VREG_ADR1	; store to background
+	MoveB r6H, VREG_ADR1+1
 	ldy r3L
 @1:	tya
 	and #%00000111
@@ -647,13 +631,13 @@ _VerticalLine:
 	bne @1
 	bcc @1
 
-@skipfore:
-	; pass 2 background
-	bbrf 6, dispBufferOn, @skipback
-	MoveB r6L, VREG_ADR0
+@skipback:
+	; pass 2 foreground
+	bbrf 7, dispBufferOn, @skipfore
+	MoveB r6L, VREG_ADR0	; read from background
 	MoveB r6H, VREG_ADR0+1
-	MoveB r6L, VREG_ADR1
-	MoveB r6H, VREG_ADR1+1
+	MoveB r5L, VREG_ADR1	; store to foreground
+	MoveB r5H, VREG_ADR1+1
 	ldy r3L
 @2:	tya
 	and #%00000111
@@ -673,7 +657,7 @@ _VerticalLine:
 	bne @2
 	bcc @2
 
-@skipback:
+@skipfore:
 	END_IO
 	PopB r8H
 	rts
