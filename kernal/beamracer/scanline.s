@@ -67,6 +67,8 @@ _GetScanLine_BR:
 	bra @1
 
 @5:	AddVW br_screen_base+$0F00, r5	; !ST_WR_FORE && !ST_WR_BACK ?!
+.import Panic
+	jmp Panic
 	bra @1
 
 .global _GetScanLine
