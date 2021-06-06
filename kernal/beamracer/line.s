@@ -141,17 +141,21 @@ _HorizontalLine:
 	sta r5L			; keep as temporary
 
 	ldx #1
+	bbrf 7, dispBufferOn, @skipfore1
 	lda VREG_PORT0
 	and r8L			; clear pattern bits
 	ora r5L			; add patern
 	stx VREG_STEP0		; increase address on write
 	sta VREG_PORT0
 
+@skipfore1:
+	bbrf 6, dispBufferOn, @skipback1
 	lda VREG_PORT1
 	and r8L
 	ora r5L
 	stx VREG_STEP1
 	sta VREG_PORT1
+@skipback1:
 
 	dec r4L			; decrease number of full cards
 
@@ -165,6 +169,7 @@ _HorizontalLine:
 	LoadB VREG_STEP0, 1	; increase address on write
 	sta VREG_STEP1
 
+	bbrf 7, dispBufferOn, @skipfore2
 	lda r7L			; pattern
 	sta VREG_PORT0		; write once
 	dex
@@ -172,8 +177,11 @@ _HorizontalLine:
 	stx VREG_REP0		; repeat this many times
 :	ldy VREG_REP0
 	bne :-			; wait until done
-
 @1:	inx			; how many full cards? (restore r4L value)
+
+@skipfore2:
+	bbrf 6, dispBufferOn, @skipback2
+	lda r7L
 	sta VREG_PORT1		; write once
 	dex
 	beq @2
@@ -181,6 +189,7 @@ _HorizontalLine:
 :	ldy VREG_REP1
 	bne :-
 
+@skipback2:
 @2:	ldx r8H			; anything for the last byte?
 	beq @end
 
@@ -192,15 +201,19 @@ _HorizontalLine:
 	and r7L			; take only pattern bits that we need
 	sta r5L			; temporary
 
+	bbrf 7, dispBufferOn, @skipfore3
 	lda VREG_PORT0
 	and r8H			; clear pattern bits
 	ora r5L			; add patern
 	sta VREG_PORT0
 
+@skipfore3:
+	bbrf 6, dispBufferOn, @skipback3
 	lda VREG_PORT1
 	and r8H
 	ora r5L
 	sta VREG_PORT1
+@skipback3:
 
 @end:
 	rmbf CONTROL_PORT_READ_ENABLE_BIT, VREG_CONTROL ; clear to avoid 'weird issues' 
@@ -600,6 +613,7 @@ _VerticalLine:
 	sta VREG_STEP1
 
 	; pass 1 foreground
+	bbrf 7, dispBufferOn, @skipfore
 	; read on port 0, write to port 1
 	MoveB r5L, VREG_ADR0
 	MoveB r5H, VREG_ADR0+1
@@ -624,7 +638,9 @@ _VerticalLine:
 	bne @1
 	bcc @1
 
+@skipfore:
 	; pass 2 background
+	bbrf 6, dispBufferOn, @skipback
 	MoveB r6L, VREG_ADR0
 	MoveB r6H, VREG_ADR0+1
 	MoveB r6L, VREG_ADR1
@@ -648,6 +664,7 @@ _VerticalLine:
 	bne @2
 	bcc @2
 
+@skipback:
 	END_IO
 	PopB r8H
 	rts

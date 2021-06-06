@@ -49,12 +49,25 @@ _GetScanLine_BR:
 	rol r5H				; *40
 
 	MoveW r5, r6
-	AddVW br_screen_base, r5
-	AddVW br_backscreen_base, r6
-	pla
+
+	bbrf 7, dispBufferOn, @4	; !ST_WR_FORE
+	bvs @3				; ST_WR_FORE | ST_WR_BACK
+	AddVW br_screen_base, r5	; ST_WR_FORE
+@1:	MoveW r5, r6
+@2:	pla
 	tax
 	rts
 
+@3:	AddVW br_screen_base, r5	; ST_WR_FORE | ST_WR_BACK
+	AddVW br_backscreen_base, r6
+	bra @2
+
+@4:	bbrf 6, dispBufferOn, @5	; ST_WR_BACK
+	AddVW br_backscreen_base, r5
+	bra @1
+
+@5:	AddVW br_screen_base+$0F00, r5	; !ST_WR_FORE && !ST_WR_BACK ?!
+	bra @1
 
 .global _GetScanLine
 
