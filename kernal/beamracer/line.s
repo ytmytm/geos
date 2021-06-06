@@ -85,7 +85,6 @@ AdjustR5R6ToX:
 	lsr
 	sta r3L
 
-	;lda r3L
 	add r5L
 	sta r5L
 	bcc :+
@@ -190,8 +189,7 @@ _HorizontalLine:
 	bne :-			; wait until done
 @1:	inx			; how many full cards? (restore r4L value)
 
-	lda r7L
-	sta VREG_PORT1		; write once
+	sta VREG_PORT1		; pattern still in A, write once
 	dex
 	beq @2
 	stx VREG_REP1
@@ -224,9 +222,6 @@ HorizontalLineEnd:
 	rts
 
 ; called from below
-HLinEnd1:
-    sta (r6),Y
-    sta (r5),Y
 HLinEnd2:
 LineEnd:
     PopW r4
