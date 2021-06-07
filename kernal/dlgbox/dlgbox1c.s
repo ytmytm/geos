@@ -19,6 +19,7 @@
 .import InitGEOEnv
 .import L8871
 
+.import ImprintRectangle
 .import FrameRectangle
 .import Rectangle
 .import SetPattern
@@ -69,19 +70,18 @@ DrawDlgBox:
 	lda (DBoxDesc),y
 	and #%00011111
 .ifdef speedupDlgBox
-	bne DrwDlgSpd0
+	bne :+
 	jmp @1
-DrwDlgSpd0:
+:
 	;1st: right,right+8,top+8,bottom
 	;2nd: left+8,right+8,bottom,bottom+8
 	jsr SetPattern
 	PushW DBoxDesc
 	ldy #0
 	lda (DBoxDesc),y
-	bpl DrwDlgSpd1
+	bpl :+
 	LoadW DBoxDesc, DBDefinedPos-1
-DrwDlgSpd1:
-	ldy #1
+:	ldy #1
 	lda (DBoxDesc),y
 	addv 8
 	sta r2L
@@ -103,6 +103,15 @@ DrwDlgSpd1:
 	lda r3H
 	adc #0
 	sta r4H
+.ifdef beamracer
+	; XXX this (and standard version below) is close but not good enough
+	; XXX imprint/recover should be done on whole dlgbox + shadow (basically add 8 to both X and Y)
+	; XXX standard version draws in two shifted passes, imprint on second one (window) will overwrite backscreen with shadow
+	; XXX speedup version doesn't do recover on shadowlines
+	; XXX right now there is no memory left for that
+	; XXX -- MW
+	jsr ImprintRectangle	; always imprint whatever is under dlgbox
+.endif
 	jsr Rectangle
 	MoveB r2H, r2L
 	addv 8
@@ -114,6 +123,9 @@ DrwDlgSpd1:
 	lda (DBoxDesc),y
 	sta r3H
 	AddVW 8, r3
+.ifdef beamracer
+	jsr ImprintRectangle	; always imprint whatever is under dlgbox
+.endif
 	jsr Rectangle
 	PopW DBoxDesc
 .else
@@ -126,6 +138,9 @@ DrwDlgSpd1:
 	and #$80
 	sta L8871
 .endif
+.ifdef beamracer
+	jsr ImprintRectangle	; always imprint whatever is under dlgbox (shadow)
+.endif
 	jsr Rectangle
 .endif
 @1:	lda #0
@@ -133,6 +148,9 @@ DrwDlgSpd1:
 	clc
 	jsr CalcDialogCoords
 	MoveW r4, rightMargin
+.ifdef beamracer
+;	jsr ImprintRectangle	; always imprint whatever is under dlgbox (window)
+.endif
 	jsr Rectangle
 .ifndef wheels_size_and_speed ; redundant
 	clc

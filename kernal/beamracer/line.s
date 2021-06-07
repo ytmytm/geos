@@ -323,12 +323,12 @@ ImprintLine:
 	sta @1
 	PushW r3
 	PushW r4
-	PushB dispBufferOn
-	ora #ST_WR_FORE | ST_WR_BACK
-	sta dispBufferOn
 	php
 	sei
 	START_IO
+	PushB dispBufferOn
+	ora #ST_WR_FORE | ST_WR_BACK
+	sta dispBufferOn
 	jsr SetupBeamRacerAddresses	; PORT0/PORT1 set to r5/r6 and step is 0
 	PopB dispBufferOn
 @1:	clc

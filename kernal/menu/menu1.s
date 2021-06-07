@@ -37,6 +37,7 @@
 .import menuStackL
 .import menuOptionTab
 .import _UseSystemFont
+.import _ImprintRectangle
 .import _FrameRectangle
 .import _Rectangle
 
@@ -106,7 +107,10 @@ DoMenu1_1:
 	PushW curPattern
 	lda #0
 	jsr _SetPattern
+.ifdef beamracer
+	jsr _ImprintRectangle		; cache whatever is under the menu
 	jsr _Rectangle
+.endif
 	PopW curPattern
 .ifdef wheels
 	lda r2H

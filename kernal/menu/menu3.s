@@ -26,6 +26,7 @@
 .import _InvertRectangle
 .import _HorizontalLine
 .import _VerticalLine
+.import _RecoverRectangle
 
 .import Ddec
 .import Rectangle
@@ -84,6 +85,14 @@ _RecoverAllMenus:
 _RecoverMenu:
 	jsr CopyMenuCoords
 RcvrMnu0:
+.ifdef beamracer
+	jsr _RecoverRectangle	; always recover from screen buffer for beamracer
+	lda RecoverVector	; call application-level recover vector in case something needs to be updated
+	ora RecoverVector+1
+	bne :+
+	rts
+:	jmp (RecoverVector)
+.else
 	lda RecoverVector
 	ora RecoverVector+1
 	bne @1
@@ -93,6 +102,7 @@ RcvrMnu0:
 	jsr SetPattern
 	jmp Rectangle
 @1:	jmp (RecoverVector)
+.endif
 
 .if ((menuVSeparator | menuHSeparator)<>0)
 DrawMenu:
