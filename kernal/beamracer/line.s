@@ -141,6 +141,8 @@ _HorizontalLine:
 	sta r7L			; temporary for pattern
 	PushW r3
 	PushW r4
+	php
+	sei
 	START_IO
 	jsr SetupBeamRacerAddresses
 
@@ -212,6 +214,7 @@ HorizontalLineEnd:
 	rmbf CONTROL_PORT_READ_ENABLE_BIT, VREG_CONTROL ; clear to avoid 'weird issues' 
 HorizontalLineEnd2:
 	END_IO
+	plp
 	PopW r4
 	PopW r3
 	rts
@@ -234,6 +237,8 @@ HorizontalLineEnd2:
 _InvertLine:
 	PushW r3
 	PushW r4
+	php
+	sei
 	START_IO
 	jsr SetupBeamRacerAddresses	; PORT0/PORT1 set to r5/r6 and step is 0
 
@@ -321,6 +326,8 @@ ImprintLine:
 	PushB dispBufferOn
 	ora #ST_WR_FORE | ST_WR_BACK
 	sta dispBufferOn
+	php
+	sei
 	START_IO
 	jsr SetupBeamRacerAddresses	; PORT0/PORT1 set to r5/r6 and step is 0
 	PopB dispBufferOn
@@ -433,6 +440,8 @@ _VerticalLine:
 	eor #$ff		; bits to protect
 	sta r7H
 
+	php
+	sei
 	START_IO
 
 	lda VREG_CONTROL
@@ -495,6 +504,7 @@ _VerticalLine:
 	sta VREG_CONTROL
 
 	END_IO
+	plp
 	PopB r8H
 	rts
 
