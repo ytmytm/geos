@@ -41,6 +41,10 @@
 .endif
 .endif
 
+.ifdef useRTC
+.import RTCSetupDateAndTime
+.endif
+
 .segment "start"
 
 ; The original version of GEOS 2.0 has purgeable init code
@@ -123,6 +127,9 @@ ASSERT_NOT_BELOW_IO
 	sta year,y
 	dey
 	bpl @6
+.ifdef useRTC
+	jsr RTCSetupDateAndTime
+.endif
 
 	;
 	jsr FirstInit
