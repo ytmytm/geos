@@ -127,7 +127,7 @@ config_inc = 1
 	;newMenu_5 = 1
 
 	; RTC driver to set date&time upon boot
-	;rtc_Ultimate2Plus = 1
+	rtc_Ultimate2Plus = 1
 
 .endif
 
