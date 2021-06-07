@@ -137,6 +137,10 @@ config_inc = 1
 	; GEOS2000
 	; bug - when 0 no blinking in menu
 	;newMenu_5 = 1
+
+	; RTC driver to set date&time upon boot
+	rtc_Ultimate2Plus = 1
+
 .endif
 
 .ifdef custom
@@ -174,6 +178,10 @@ config_inc = 1
 	; GEOS2000
 	; bug - when 0 no blinking in menu
 	;newMenu_5 = 1
+
+	; RTC driver to set date&time upon boot
+	;rtc_Ultimate2Plus = 1
+
 .endif
 
 ; Feel (almost) free to change values below:
@@ -207,6 +215,10 @@ REUPresent = 1
 ; but for Beamracer we want to keep REU support too
 .if .defined(useBeamRacerRam)
 REUPresent = 1
+.endif
+
+.if .defined(rtc_Ultimate2Plus)
+useRTC = 1
 .endif
 
 .ifdef traps
