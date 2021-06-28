@@ -117,7 +117,11 @@ ASSERT_NOT_BELOW_IO
 ASSERT_NOT_BELOW_IO
 
 	jsr i_FillRam
+.ifdef useBeamRacerRam
+	.word dlgBoxRamBuf-dirEntryBuf	; we have code in this space now
+.else
 	.word $0500
+.endif
 	.word dirEntryBuf
 	.byte 0
 

@@ -166,6 +166,8 @@ RamExpWrHlpEnd:
 
 .ifdef useBeamRacerRam
 .include "kernal/beamracer/beamracer-vlib/vasyl.s"
+
+.segment "dlgboxrambuf"
 ; r0   c64 address
 ; r1   exp page number, 3 bits of r1H but bank 7 reserved for screen (not checked here)
 ; r2H  # of bytes (in pages)

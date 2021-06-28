@@ -66,7 +66,11 @@ _EnterDeskTop:
 .ifdef useRamExp
 	MoveW DeskTopStart, r0
 	MoveB DeskTopLgh, r2H
+.ifdef useBeamRacerRam
+	LoadW r1, 3		; 3 - first free page (0 - stat, 1+2 - dlogbox buf)
+.else
 	LoadW r1, 1
+.endif
 	jsr RamExpRead
 	LoadB r0L, NULL
 	MoveW DeskTopExec, r7

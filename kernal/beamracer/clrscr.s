@@ -10,12 +10,12 @@
 .include "kernal.inc"
 .include "c64.inc"
 
-.segment "graph1"
-
 .import i_Rectangle
 .import SetPattern
 
 .global ClrScr
+
+.segment "load1b"
 
 ClrScr:
 	LoadB dispBufferOn, ST_WR_FORE | ST_WR_BACK

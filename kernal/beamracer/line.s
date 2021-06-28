@@ -71,7 +71,7 @@ GetCardsDistance:
 ;     r3       divided by 8
 ;     r5       adjusted to first card of X
 ;     r6       adjusted to first card of X
-.segment "graph2a"
+.segment "dlgboxrambuf"
 AdjustR5R6ToX:
 	lda r3L
 	lsr r3H
@@ -118,7 +118,7 @@ AdjustR5R6ToX:
 ;	CONTROL set to bank and read/write operation of ports
 ; destroys: a
 ;
-.segment "graph2a"
+.segment "dlgboxrambuf"
 SetupBeamRacerAddresses:
 	jsr PrepareXCoord_BR	; --> r5/r6 set to start of line, r8L/r8H bit pattern to protect on left, pattern right
 	jsr GetCardsDistance    ; --> r4L set to card distance

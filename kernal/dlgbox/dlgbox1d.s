@@ -27,6 +27,62 @@
 
 .segment "dlgbox1d"
 
+.ifdef useBeamRacerRam
+.include "kernal/beamracer/beamracer-vlib/vasyl.s"
+	; I/O is already enabled here
+DialogSave:
+	; we use bank 0, pages 1+2
+	lda VREG_CONTROL
+	and #%11111000
+	sta VREG_CONTROL
+	ldy #0
+	sty VREG_ADR0
+	iny
+	sty VREG_ADR0+1
+	sty VREG_STEP0
+	dey
+	ldx #0
+@1:	jsr DialogNextSaveRestoreEntry
+	beq @3
+@2:	lda (r2),y
+	sta VREG_PORT0
+	iny
+	dec r3L
+	bne @2
+	beq @1
+@3:	lda mob7clr	; store one more byte
+	sta VREG_PORT0
+	rts
+
+DialogRestore:
+	sei
+	php
+	lda VREG_CONTROL
+	and #%11111000
+	ora #(1 << CONTROL_PORT_READ_ENABLE_BIT)
+	sta VREG_CONTROL
+	ldy #0
+	sty VREG_ADR0
+	iny
+	sty VREG_ADR0+1
+	sty VREG_STEP0
+	dey
+	ldx #0
+@1:	jsr DialogNextSaveRestoreEntry
+	beq @3
+@2:	lda VREG_PORT0
+	sta (r2),y
+	iny
+	dec r3L
+	bne @2
+	beq @1
+@3:	lda VREG_PORT0
+	and #%00001111	; clear upper nibble so that beamracer won't be disabled
+	sta mob7clr
+	rmbf CONTROL_PORT_READ_ENABLE_BIT, VREG_CONTROL ; clear to avoid 'weird issues'
+	plp
+	rts
+.else
 DialogSave:
 	ldx #0
 	ldy #0
@@ -55,6 +111,7 @@ DialogRestore:
 	beq @1
 @3:	plp
 	rts
+.endif ; useBeamRacerRam
 
 DialogNextSaveRestoreEntry:
 	tya

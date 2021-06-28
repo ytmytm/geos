@@ -13,8 +13,7 @@
 
 .global _GetScanLine_BR
 
-.segment "graph2n"
-
+.segment "dlgboxrambuf"
 ;---------------------------------------------------------------
 ; GetScanLine                                             $C13C
 ;

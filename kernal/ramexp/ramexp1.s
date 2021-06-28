@@ -229,7 +229,11 @@ ExpFaultStr2:
 .ifdef useRamExp
 LoadDeskTop:
 	LoadB a0L, 0
-	LoadB BVChainTab, 1	;1 - first free
+.ifdef useBeamRacerRam
+	LoadB BVChainTab, 3	;3 - first free page (0 - stat, 1+2 - dlgbox buf)
+.else
+	LoadB BVChainTab, 1	;1 - first free page
+.endif
 LoadDTLp:
 	LoadW r6, DeskTopName
 	jsr FindFile
