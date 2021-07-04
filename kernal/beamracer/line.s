@@ -22,7 +22,7 @@
 .global _InvertLine
 .global _RecoverLine
 .global _VerticalLine
-
+.global SetupBeamRacerRAMr5r6
 
 ; in: r11L - y position
 ;     r3   - x left
@@ -123,6 +123,7 @@ SetupBeamRacerAddresses:
 	jsr PrepareXCoord_BR	; --> r5/r6 set to start of line, r8L/r8H bit pattern to protect on left, pattern right
 	jsr GetCardsDistance    ; --> r4L set to card distance
 	jsr AdjustR5R6ToX	; --> r5/r6 adjusted to card with left X data, r3 set to r3 div 8
+SetupBeamRacerRAMr5r6:
 	lda VREG_CONTROL
 	and #%11111000
 	ora #br_screen_bank
