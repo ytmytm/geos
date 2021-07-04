@@ -19,6 +19,7 @@
 
 .segment "dlgbox1k"
 
+ASSERT_NOT_BELOW_IO
 DBIcPicNO:
 	.byte 5, %11111111, $80+1, %11111110, $db+8, 2, $80+6
 	     ;%11111111, %11111111, %11111111, %11111111, %11111111, %11111110
@@ -104,3 +105,4 @@ DBIcPicDISK:
 	.byte 5, %11111111
 .endif
 
+ASSERT_NOT_BELOW_IO

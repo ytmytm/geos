@@ -14,6 +14,7 @@
 
 .segment "dlgbox1i"
 
+ASSERT_NOT_BELOW_IO
 DBGFArrowPic:
 .ifdef wheels_dlgbox_features
 	.byte 10, %11111111 ; repeat 10
@@ -49,4 +50,4 @@ DBGFArrowPic:
 	     ;%11111111, %11111111, %11111111
 	.byte 3, %11111111
 .endif
-
+ASSERT_NOT_BELOW_IO
