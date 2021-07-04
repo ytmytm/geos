@@ -17,8 +17,6 @@
 CallNoRAMSharing = $9D80
 .endif
 
-.ifndef beamracer
-
 .global BitmapUpHelp
 .global BitmapDecode
 .global _BitmapUp
@@ -256,5 +254,3 @@ IndirectR13:
 IndirectR14:
 	jmp (r14)
 .endif
-
-.endif ; beamracer
