@@ -31,50 +31,50 @@
 ;---------------------------------------------------------------
 _BitmapUp:
 	PushB r9H
-	LoadB r9H, NULL
+	LoadB r9H, NULL ; flag, if bit 7 set then data comes from (r13) call with (r14) called after each packet processed (r4L==0)
 	sta r3L
 	sta r4L
-@1:	jsr BitmapUpHelp
-	inc r1H
+@1:	jsr BitmapUpHelp        ; decode one line
+	inc r1H                 ; next line (for _GetScanLine)
 	dec r2H
-	bne @1
+	bne @1                  ; are we done yet?
 	PopB r9H
 	rts
 
 BitmapUpHelp:
 	ldx r1H
 	jsr _GetScanLine
-	MoveB r2L, r3H
-	CmpBI r1L, $20
+	MoveB r2L, r3H          ; copy width ro r3H
+	CmpBI r1L, $20          ; 32*8==256, check if hi byte needs to be adjusted
 	bcc @1
 	inc r5H
 	inc r6H
 @1:	asl
 	asl
-	asl
+	asl                     ; *8 for byte address of 1st card
 	tay
-@2:	sty r9L
-	jsr BitmapDecode
+@2:	sty r9L                 ; temporary storage
+	jsr BitmapDecode        ; next decoded byte from stream
 	ldy r9L
-	sta (r5),y
-	sta (r6),y
+	sta (r5),y              ; put into foreground
+	sta (r6),y              ; put into background
 	tya
-	addv 8
+	addv 8                  ; next column
 	bcc @3
 	inc r5H
 	inc r6H
 @3:	tay
-	dec r3H
+	dec r3H                 ;decrease width, are done done yet?
 	bne @2
 	rts
 .ifdef bsw128
 ; 80 column version
 .import StaBackbuffer80
 .import StaFrontbuffer80
-@4:	lda r1L
+@4:	lda r1L                 ;xpos needs doubling?
 	bpl @5
 	asl a
-@5:	clc
+@5:	clc                     ; add to start of row
 	adc r5L
 	sta r5L
 	sta r6L
