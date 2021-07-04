@@ -10,7 +10,10 @@
 .include "kernal.inc"
 .include "c64.inc"
 
-.import _GetScanLine
+.include "kernal/beamracer/beamracer-vlib/vasyl.s"
+
+.import _GetScanLine_BR
+.import SetupBeamRacerRAMr5r6
 
 .global BitmapUpHelp
 .global BitmapDecode
@@ -43,56 +46,36 @@ _BitmapUp:
 
 BitmapUpHelp:
 	ldx r1H
-	jsr _GetScanLine
-	MoveB r2L, r3H          ; copy width ro r3H
-	CmpBI r1L, $20          ; 32*8==256, check if hi byte needs to be adjusted
-	bcc @1
-	inc r5H
-	inc r6H
-@1:	asl
-	asl
-	asl                     ; *8 for byte address of 1st card
-	tay
-@2:	sty r9L                 ; temporary storage
-	jsr BitmapDecode        ; next decoded byte from stream
-	ldy r9L
-	sta (r5),y              ; put into foreground
-	sta (r6),y              ; put into background
-	tya
-	addv 8                  ; next column
-	bcc @3
-	inc r5H
-	inc r6H
-@3:	tay
-	dec r3H                 ;decrease width, are done done yet?
-	bne @2
-	rts
-.ifdef bsw128
-; 80 column version
-.import StaBackbuffer80
-.import StaFrontbuffer80
-@4:	lda r1L                 ;xpos needs doubling?
-	bpl @5
-	asl a
-@5:	clc                     ; add to start of row
+	jsr _GetScanLine_BR
+	MoveB r2L, r3H          ; copy width to r3H (current column counter)
+
+	lda r1L                 ; xpos (cards)
+	clc                     ; add to start of row
 	adc r5L
 	sta r5L
 	sta r6L
-	bcc @6
+	bcc :+
 	inc r5H
 	inc r6H
-@6:	jsr BitmapDecode
-	jsr StaFrontbuffer80
-	jsr StaBackbuffer80
-	inc r6L
-	inc r5L
-	bne @7
-	inc r6H
-	inc r5H
-@7:	dec r3H
-	bne @6
+
+:	php
+	sei
+	START_IO
+	jsr SetupBeamRacerRAMr5r6
+	lda #1
+	sta VREG_STEP0
+	sta VREG_STEP1
+
+:	jsr BitmapDecode
+	sta VREG_PORT0
+	sta VREG_PORT1
+	dec r3H
+	bne :-
+
+	rmbf CONTROL_PORT_READ_ENABLE_BIT, VREG_CONTROL ; clear to avoid 'weird issues' 
+	END_IO
+	plp
 	rts
-.endif
 
 BitmapDecode:
 BitmapDecodeX:
