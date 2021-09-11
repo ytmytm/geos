@@ -92,7 +92,7 @@ dl_start_init:
 	MOV	VREG_DLIST2L, <dl_start
 	MOV	VREG_DLIST2H, >dl_start
 	; start display list #0 from display list bank (the same as this one, but independent of ports)
-	MOV	VREG_DL2STROBE, %10000000+br_dlist_bank
+	MOV	VREG_DL2STROBE, %00001000+br_dlist_bank
 	END
 
 dl_start:
