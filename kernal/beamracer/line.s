@@ -183,18 +183,20 @@ _HorizontalLine:
 	dex
 	beq @1			; skip if nothing more
 	stx VREG_REP0		; repeat this many times
-:	ldy VREG_REP0
-	bne :-			; wait until done
 @1:	inx			; how many full cards? (restore r4L value)
 
 	sta VREG_PORT1		; pattern still in A, write once
 	dex
 	beq @2
 	stx VREG_REP1
-:	ldy VREG_REP1
-	bne :-
 
-@2:	ldx r8H			; anything for the last byte?
+@2:
+:	ldy VREG_REP0
+	bne :-			; wait until transfer 0 done
+:	ldy VREG_REP1
+	bne :-			; wait until transfer 1 done
+
+	ldx r8H			; anything for the last byte?
 	beq @end
 
 	LoadB VREG_STEP1, 0	; don't increase address on write
