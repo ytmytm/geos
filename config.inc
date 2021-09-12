@@ -125,7 +125,7 @@ config_inc = 1
 	br_dlist_base = $c0 ; $00C0 ;$A000 ;+8000
 	; Beamracer screen bank
 	br_screen_bank = 7
-	; Beamracer screen base address
+	; Beamracer screen base addresses, low byte *must* be equal in both
 	br_screen_base = $C000
 	br_backscreen_base = $E000
 
