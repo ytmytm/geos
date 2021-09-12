@@ -10,24 +10,14 @@
 .include "kernal.inc"
 .include "c64.inc"
 
-.import BitMaskPow2Rev
-.import _GetScanLine
-.ifdef bsw128
-.import _Dabs
-.import _TempHideMouse
-.import _DShiftLeft
-.import _HorizontalLine
-.else
-.import Dabs
-.endif
+.include "kernal/beamracer/beamracer-vlib/vasyl.s"
 
-.import LF4B7
-.import LF558
-.import StaFrontbuffer80
-.import StaBackbuffer80
-.import LF4A7
-.import GetLeftXAddress
-.import _NormalizeX
+.import BitMaskPow2Rev
+.import _HorizontalLine
+.import _GetScanLine_BR
+.import _Dabs
+.import SetupBeamRacerRAMr5r6
+.import AdjustR5R6ToX
 
 .global _TestPoint
 .global _DrawPoint
@@ -51,7 +41,6 @@
 ;---------------------------------------------------------------
 _DrawLine:
 	php
-.ifdef bsw128
 	bmi @Y
 	lda r11L
 	cmp r11H
@@ -61,11 +50,7 @@ _DrawLine:
 	bcs @X
 	lda #0
 @X:	jmp _HorizontalLine
-@Y:	ldx #r3
-	jsr _NormalizeX
-	ldx #r4
-	jsr _NormalizeX
-.endif
+@Y:
 	LoadB r7H, 0
 	lda r11H
 	sub r11L
@@ -81,124 +66,11 @@ _DrawLine:
 	sbc r3H
 	sta r12H
 	ldx #r12
-.ifdef bsw128
 	jsr _Dabs
-.else
-	jsr Dabs
-.endif
 	CmpW r12, r7
 	bcs @2
-.ifdef bsw128 ; TODO dedup
-	jmp @LF140
-.else
 	jmp @9
-.endif
 @2:
-.ifdef bsw128
-	lda r7H
-	sta r9H
-	lda r7L
-	sta r9L
-	ldy #1
-	ldx #r9
-	jsr _DShiftLeft
-	lda r9L
-	sub r12L
-	sta r8L
-	lda r9H
-	sbc r12H
-	sta r8H
-	lda r7L
-	sub r12L
-	sta r10L
-	lda r7H
-	sbc r12H
-	sta r10H
-	ldy #1
-	ldx #r10
-	jsr _DShiftLeft
-	LoadB r13L, $ff
-	jsr CmpWR3R4
-	bcc @LF0F9
-	CmpB r11L, r11H
-	bcc @LF0DE
-	LoadB r13L, 1
-@LF0DE:	PushW r3
-	MoveW r4, r3
-	MoveB r11H, r11L
-	PopW r4
-	bra @LF103
-@LF0F9:	ldy r11H
-	cpy r11L
-	bcc @LF103
-	LoadB r13L, 1
-@LF103:	plp
-	php
-	jsr _DrawPoint
-	jsr CmpWR3R4
-	bcs @LF13E
-	inc r3L
-	bne @LF113
-	inc r3H
-@LF113:	bbrf 7, r8H, @LF127
-	AddW r9, r8
-	bra @LF103
-@LF127:	AddB_ r13L, r11L
-	AddW r10, r8
-	bra @LF103
-@LF13E:	plp
-	rts
-@LF140:	MoveW r12, r9
-	ldy #1
-	ldx #r9
-	jsr _DShiftLeft
-	lda r9L
-	sub r7L
-	sta r8L
-	lda r9H
-	sbc r7H
-	sta r8H
-	lda r12L
-	sub r7L
-	sta r10L
-	lda r12H
-	sbc r7H
-	sta r10H
-	ldy #$01
-	ldx #r10
-	jsr _DShiftLeft
-	lda #$FF
-	sta r13H
-	lda #$FF
-	sta r13L
-	CmpB r11L, r11H
-	bcc @LF1A0
-	jsr CmpWR3R4
-	bcc @LF18B
-	LoadW r13, 1
-@LF18B:	MoveW r4, r3
-	PushB r11L
-	MoveB r11H, r11L
-	PopB r11H
-	bra @LF1AD
-@LF1A0:	jsr CmpWR3R4
-	bcs @LF1AD
-	LoadW r13, 1
-@LF1AD:	plp
-	php
-	jsr _DrawPoint
-	CmpB r11L, r11H
-	bcs @LF1EB
-	inc r11L
-	bbrf 7, r8H, @LF1CE
-	AddW r9, r8
-	bra @LF1AD
-@LF1CE:	AddW r13, r3
-	AddW r10, r8
-	bra @LF1AD
-@LF1EB:	plp
-	rts
-.else
 	lda r7L
 	asl
 	sta r9L
@@ -301,7 +173,6 @@ _DrawLine:
 	bra @C
 @E:	plp
 	rts
-.endif
 
 ;---------------------------------------------------------------
 ; DrawPoint                                               $C133
@@ -312,16 +183,9 @@ _DrawLine:
 ;---------------------------------------------------------------
 _DrawPoint:
 	php
-.ifdef bsw128
-	jsr _TempHideMouse
-	ldx #r3
-	jsr _NormalizeX
-.endif
 	ldx r11L
-	jsr _GetScanLine
-.ifdef bsw128
-	bbsf 7, graphMode, DrwPoi80
-.endif
+	jsr _GetScanLine_BR
+	; draw80 here
 	lda r3L
 	and #%11111000
 	tay
@@ -389,50 +253,26 @@ DrwPointTemp:
 ; Destroyed: a, x, y, r5, r6
 ;---------------------------------------------------------------
 _TestPoint:
-.ifdef bsw128
-	jsr _TempHideMouse
-	ldx #r3
-	jsr _NormalizeX
-.endif
+	PushW r3
 	ldx r11L
-	jsr _GetScanLine
-.ifdef bsw128
-	bbsf 7, graphMode, TestPoi80
-.endif
-	lda r3L
-	and #%11111000
-	tay
-	lda r3H
-	beq @1
-	inc r6H
-@1:	lda r3L
-	and #%00000111
-	tax
+	jsr _GetScanLine_BR
+	jsr AdjustR5R6ToX
+	php
+	sei
+	START_IO
+	jsr SetupBeamRacerRAMr5r6
+	lda VREG_PORT1
+	sta @mask1
+	rmbf CONTROL_PORT_READ_ENABLE_BIT, VREG_CONTROL ; clear to avoid 'weird issues'
+	END_IO
+	plp
+	PopW r3
 	lda BitMaskPow2Rev,x
-	and (r6),y
+@mask1 = *+1
+	and #0
 	beq @2
 	sec
 	rts
 @2:	clc
 	rts
 
-.ifdef bsw128
-.global CmpWR3R4
-TestPoi80:
-	jsr GetLeftXAddress
-	lda BitMaskPow2Rev,x
-	jsr LF4B7
-	beq LF29F
-	sec
-	rts
-LF29F:	clc
-	rts
-
-CmpWR3R4:
-	lda r3H
-	cmp r4H
-	bne LF2AB
-	lda r3L
-	cmp r4L
-LF2AB:	rts
-.endif
