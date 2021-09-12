@@ -23,6 +23,7 @@
 .global _RecoverLine
 .global _VerticalLine
 .global SetupBeamRacerRAMr5r6
+.global AdjustR5R6ToX
 
 ; in: r11L - y position
 ;     r3   - x left
@@ -64,6 +65,7 @@ GetCardsDistance:
 	sta r4L
 	rts
 
+; The same thing as GetLeftXAddress on C128 but optimized to 320 pixels instead of 640
 ; in: r3       X coord (0-319)
 ;     r5       line address on foreground
 ;     r6       line address on background
@@ -71,8 +73,12 @@ GetCardsDistance:
 ;     r3       divided by 8
 ;     r5       adjusted to first card of X
 ;     r6       adjusted to first card of X
+;     X        bit number
 .segment "dlgboxrambuf"
 AdjustR5R6ToX:
+	lda r3L
+	and #%0000111
+	tax
 	lda r3L
 	lsr r3H
 	ror
@@ -124,7 +130,7 @@ SetupBeamRacerAddresses:
 	jsr PrepareXCoord_BR	; --> r5/r6 set to start of line, r8L/r8H bit pattern to protect on left, pattern right
 	jsr GetCardsDistance    ; --> r4L set to card distance
 	jsr AdjustR5R6ToX	; --> r5/r6 adjusted to card with left X data, r3 set to r3 div 8
-SetupBeamRacerRAMr5r6:
+SetupBeamRacerRAMr5r6:		; --> this must not change X register
 	lda VREG_CONTROL
 	and #%11111000
 	ora #br_screen_bank
