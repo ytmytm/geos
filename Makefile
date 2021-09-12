@@ -239,6 +239,7 @@ ifeq ($(VARIANT), beamracer)
 	kernal/beamracer/dlist.s \
 	kernal/beamracer/clrscr.s \
 	kernal/beamracer/line.s \
+	kernal/beamracer/point.s \
 	kernal/beamracer/fonts2.s \
 	kernal/beamracer/scanline.s
 endif

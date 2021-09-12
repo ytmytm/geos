@@ -29,8 +29,6 @@
 .import GetLeftXAddress
 .import _NormalizeX
 
-.ifndef beamracer
-
 .global _TestPoint
 .global _DrawPoint
 .global _DrawLine
@@ -438,5 +436,3 @@ CmpWR3R4:
 	cmp r4L
 LF2AB:	rts
 .endif
-
-.endif  ; beamracer
