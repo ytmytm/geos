@@ -30,7 +30,7 @@
 .import FontGt2
 .import FontGt1
 
-.ifndef beamracer
+.ifdef beamracer
 
 .if (!.defined(bsw128)) & (!.defined(wheels))
 .import FontTVar1
@@ -976,5 +976,3 @@ FontPutChar80:
 @6:	jsr Font_5
 	bra @3
 .endif
-
-.endif  ; beamracer
