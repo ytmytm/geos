@@ -915,14 +915,14 @@ FontPutChar:
 	bcc @6
 	bne @7
 @6:	jsr Font_4
-@7:	inc r5L
+@7:	inc r5L		; next line
 	inc r6L
 	lda r5L
-	and #%00000111
+	and #%00000111	; but if we cross char boundary (9th line)
 	bne @8
-	inc r5H
+	inc r5H		; we need to add 320-8 = 256+56 (because it was already increased by 8
 	inc r6H
-	AddVB $38, r5L
+	AddVB 64-8, r5L
 	sta r6L
 	bcc @8
 	inc r5H
@@ -943,10 +943,10 @@ LE6E0:	lda r5L
 	inc r5H
 	inc r6H
 @1:	inc r1H
-	CmpBI r1H, 100
+	CmpBI r1H, 100				; in the middle of backbuffer (past line 100)...
 	bne FontPutChar80
 	bbrf 6, dispBufferOn, FontPutChar80
-	AddVB $21, r6H
+	AddVB $21, r6H				; there is a gap between backbuffer ranges in RAM, skip over that gap
 	bbsf 7, dispBufferOn, FontPutChar80
 	sta r5H
 FontPutChar80:
