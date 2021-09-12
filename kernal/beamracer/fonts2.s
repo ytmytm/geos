@@ -3,6 +3,10 @@
 ;
 ; Font drawing
 
+; Maciej 'YTM/Elysium' Witkowiak, BeamRacer support
+; for BeamRacer Font_2 and Font_4 were altered
+; r1L is unused here but allowed to be changed by OS
+
 .include "const.inc"
 .include "geossym.inc"
 .include "geosmac.inc"
@@ -10,13 +14,15 @@
 .include "kernal.inc"
 .include "c64.inc"
 
+.include "kernal/beamracer/beamracer-vlib/vasyl.s"
+
 .import BitMaskPow2
 .import FontSH5
 .import base
 .import BitMaskLeadingClear
 .import BitMaskLeadingSet
 .import GetChWdth1
-.import _GetScanLine
+.import _GetScanLine_BR
 .import FntIndirectJMP
 .import b0, b1, b2, b3, b4, b5, b6, b7
 .import c0, c1, c2, c3, c4, c5, c6, c7
@@ -32,24 +38,15 @@
 
 .ifdef beamracer
 
+.import SetupBeamRacerRAMr5r6
+
 .if (!.defined(bsw128)) & (!.defined(wheels))
 .import FontTVar1
 .import FontTVar2
 .endif
 
-.ifdef bsw128
-; XXX back bank, yet var lives on front bank!
-PrvCharWidth = $880D
-.else
 .import PrvCharWidth
-.endif
-
-.ifdef bsw128
-.import _TempHideMouse
-.else
-.import GetScanLine
 .import GetRealSize
-.endif
 
 .global Font_9
 .global FontPutChar
@@ -277,11 +274,7 @@ Font_tabH:
 
 Font_2:
 	ldx r1H
-.ifdef bsw128
-	jsr _GetScanLine
-.else
-	jsr GetScanLine
-.endif
+	jsr _GetScanLine_BR
 	lda FontTVar2
 	ldx FontTVar2+1
 	bmi @2
@@ -294,61 +287,20 @@ Font_2:
 @3:	pha
 	and #%11111000
 	sta r4L
-.ifdef bsw128
-	bbsf 7, graphMode, @LE319
-.endif
-	cpx #0
-	bne @4
-	cmp #$c0
-	bcc @6
-@4:	subv $80
-	pha
-	AddVB $80, r5L
-	sta r6L
-	bcc @5
-	inc r5H
-	inc r6H
-@5:	pla
-@6:	sta r1L
-.ifdef bsw128
-	bra @LE333
-@LE319:	ldy #$00
-	sty r1L
 	stx r4H
 	lsr r4H
 	ror a
 	lsr r4H
 	ror a
-	lsr a
+	lsr a	; divide by 8 and add to r5/r6
 	clc
 	adc r5L
 	sta r5L
 	sta r6L
-	bcc @LE333
+	bcc @4
 	inc r5H
 	inc r6H
-.endif
-@LE333:
-.ifdef bsw128
-	lda FontTVar2+1
-	lsr a
-	sta r7L
-	lda FontTVar2
-	ror a
-	lsr r7L
-	ror a
-	lsr r7L
-	ror a
-	sta r7L
-	lda leftMargin+1
-	lsr a
-	sta r3L
-	lda leftMargin
-	ror a
-	lsr r3L
-	ror a
-	lsr a
-.else
+@4:
 	MoveB FontTVar2+1, r3L
 	lsr r3L
 	lda FontTVar2
@@ -364,7 +316,7 @@ Font_2:
 	ror
 	lsr
 	lsr
-.endif
+
 	sub r7L
 	bpl @7
 	lda #0
@@ -580,53 +532,64 @@ clc_rts:
         rts
 .endif
 
+	.segment "graph2a"
 Font_4:
-	ldy r1L
+ASSERT_NOT_BELOW_IO
+	php
+	sei
+	START_IO
+	jsr SetupBeamRacerRAMr5r6 ; r5, r6 to ports, 0 step
+	jsr Font_4_inner	  ; subroutine due to multiple exit points
+	rmbf CONTROL_PORT_READ_ENABLE_BIT, VREG_CONTROL ; clear to avoid 'weird issues'
+	END_IO
+	plp
+	rts
+
+Font_4_inner:
 	ldx FontTVar1
-.ifndef bsw128
 	lda Z45,x
-.endif
 	cpx r8L
 	beq @3
 	bcs @4
-.ifdef bsw128
-	lda Z45,x
-.endif
 	eor r10L
 	and r9L
 	sta @mask1
+	lda VREG_PORT1	; first byte
+	sta @maskbr1
+	LoadB VREG_STEP0, 1
+	sta VREG_STEP1
 	lda r3L
-	and (r6),y
+@maskbr1 = *+1
+	and #0
 @mask1 = *+1
 	ora #0
-	sta (r6),y
-	sta (r5),y
-@1:	tya
-	addv 8
-	tay
+	sta VREG_PORT1
+	sta VREG_PORT0
+@1:
 	inx
 	cpx r8L
 	beq @2
 	lda Z45,x
 	eor r10L
-	sta (r6),y
-	sta (r5),y
+	sta VREG_PORT1	; middle bytes
+	sta VREG_PORT0
 	bra @1
 @2:	lda Z45,x
 	eor r10L
 	and r9H
 	sta @mask2
+	LoadB VREG_STEP1, 0
+	lda VREG_PORT1	; last byte
+	sta @maskbr2
 	lda r4H
-	and (r6),y
+@maskbr2 = *+1
+	and #0
 @mask2 = *+1
 	ora #0
-	sta (r6),y
-	sta (r5),y
+	sta VREG_PORT1
+	sta VREG_PORT0
 	rts
 @3:
-.ifdef bsw128
-	lda Z45,x
-.endif
 	eor r10L
 	and r9H
 	eor #$ff
@@ -634,19 +597,24 @@ Font_4:
 	ora r4H
 	eor #$ff
 	sta @mask3
+	LoadB VREG_STEP1, 0
+	lda VREG_PORT1
+	sta @maskbr3
 	lda r3L
 	ora r4H
-	and (r6),y
+	;and (r6),y
+@maskbr3 = *+1
+	and #0
 @mask3 = *+1
 	ora #0
-	sta (r6),y
-	sta (r5),y
-@4:
-.ifdef bsw128
-shared_rts:
-.endif
-	rts
+	sta VREG_PORT1
+	sta VREG_PORT0
+	;sta (r6),y
+	;sta (r5),y
+ASSERT_NOT_BELOW_IO
+@4:	rts
 
+	.segment "fonts2"
 Font_5:
 	ldx r8L
 	lda #0
@@ -773,11 +741,6 @@ FontPutChar:
 	tya
 	jsr Font_1 ; put pointer in r13
 	bcs @9 ; return
-.ifdef bsw128
-	jsr _TempHideMouse
-	bbrf 7, graphMode, @1
-	jmp FontPutChar80
-.endif
 @1:	clc
 	lda currentMode
 	and #SET_UNDERLINE | SET_ITALIC
@@ -799,14 +762,9 @@ FontPutChar:
 	bcc @6
 	bne @7
 @6:	jsr Font_4
-@7:	inc r5L
-	inc r6L
-	lda r5L
-	and #%00000111
-	bne @8
-	inc r5H
-	inc r6H
-	AddVB $38, r5L
+@7:	lda r5L
+	addv SC_BYTE_WIDTH	; next line
+	sta r5L
 	sta r6L
 	bcc @8
 	inc r5H
@@ -816,50 +774,6 @@ FontPutChar:
 	bne @1
 @9:	PopB r1H
 	rts
-
-.ifdef bsw128
-; FontPutChar for 80 column mode
-LE6E0:	lda r5L
-	add #SCREENPIXELWIDTH/8
-	sta r5L
-	sta r6L
-	bcc @1
-	inc r5H
-	inc r6H
-@1:	inc r1H
-	CmpBI r1H, 100
-	bne FontPutChar80
-	bbrf 6, dispBufferOn, FontPutChar80
-	AddVB $21, r6H
-	bbsf 7, dispBufferOn, FontPutChar80
-	sta r5H
-FontPutChar80:
-	clc
-	lda currentMode
-	and #SET_UNDERLINE | SET_ITALIC
-	beq @1
-	jsr Font_3
-@1:	php
-	bcs @2
-	jsr FntIndirectJMP
-@2:	bbsf 7, r8H, @6
-	AddW curSetWidth, r2
-@3:	plp
-	bcs @5
-	lda r1H
-	cmp windowTop
-	bcc @5
-	cmp windowBottom
-	bcc @4
-	bne @5
-@4:	jsr LE4BC
-@5:	dec r10H
-	bne LE6E0
-	PopB r1H
-	rts
-@6:	jsr Font_5
-	bra @3
-.endif
 
 .endif ; beamracer
 
