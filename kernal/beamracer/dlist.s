@@ -10,7 +10,7 @@ FIRST_LINE = 51
 ; first visible column
 FIRST_COL = 15
 ; number of rows (1-25) to overlay
-LAST_LINE = 12*8
+LAST_LINE = 25*8
 
 .include "const.inc"
 .include "geossym.inc"
