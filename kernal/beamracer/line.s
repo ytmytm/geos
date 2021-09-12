@@ -119,6 +119,7 @@ AdjustR5R6ToX:
 ; destroys: a
 ;
 .segment "dlgboxrambuf"
+ASSERT_NOT_BELOW_IO
 SetupBeamRacerAddresses:
 	jsr PrepareXCoord_BR	; --> r5/r6 set to start of line, r8L/r8H bit pattern to protect on left, pattern right
 	jsr GetCardsDistance    ; --> r4L set to card distance
@@ -136,6 +137,7 @@ SetupBeamRacerRAMr5r6:
 	LoadB VREG_STEP0, 0	; don't advance for the first byte (there will be read/write)
 	sta VREG_STEP1
 	rts
+ASSERT_NOT_BELOW_IO
 
 .segment "graph2a"
 _HorizontalLine:
@@ -452,7 +454,7 @@ _VerticalLine:
 	ora #br_screen_bank
 	ora #(1 << CONTROL_PORT_READ_ENABLE_BIT)
 	sta VREG_CONTROL
-	LoadB VREG_STEP0, 40	; advance one line every r/w
+	LoadB VREG_STEP0, SC_BYTE_WIDTH	; advance one line every r/w
 	sta VREG_STEP1
 
 	; pass 1 background
