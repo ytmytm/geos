@@ -183,65 +183,44 @@ _DrawLine:
 ;---------------------------------------------------------------
 _DrawPoint:
 	php
+	plp
+	tax			; preserve flags in X
+	PushW r3		; r3 must not be changed
+	stx r3L			; preserve flags in r3L
 	ldx r11L
 	jsr _GetScanLine_BR
-	; draw80 here
-	lda r3L
-	and #%11111000
-	tay
-	lda r3H
-	beq @1
-	inc r5H
-	inc r6H
-@1:	lda r3L
-	and #%00000111
-	tax
+	jsr AdjustR5R6ToX
+	php
+	sei
+	START_IO
+	jsr SetupBeamRacerRAMr5r6	; r5/r6 copied to PORT0/1 addresses, STEP0/1 set to 0
+	PushB r3L		; restore flags from r3L
 	lda BitMaskPow2Rev,x
-	plp
+	plp			; restore flags
 	bmi @4
 	bcc @2
-	ora (r6),y
+	ora VREG_PORT1
 	bra @3
 @2:	eor #$ff
-	and (r6),y
-@3:	sta (r6),y
-	sta (r5),y
-	rts
+	and VREG_PORT1
+@3:	sta VREG_PORT1
+	sta VREG_PORT0
+	bra @5
 @4:	pha
 	eor #$ff
-	and (r5),y
-	sta (r5),y
+	and VREG_PORT0
+	sta VREG_PORT0
 	pla
-	and (r6),y
-	ora (r5),y
-	sta (r5),y
-	rts
+	and VREG_PORT1
+	ora VREG_PORT0
+	sta VREG_PORT0
+@5:
 
-.ifdef bsw128
-DrwPoi80:
-	jsr GetLeftXAddress
-	lda BitMaskPow2Rev,x
+	rmbf CONTROL_PORT_READ_ENABLE_BIT, VREG_CONTROL ; clear to avoid 'weird issues'
+	END_IO
 	plp
-	bmi @3
-	bcc @1
-	jsr LF4A7
-	bra @2
-@1:	eor #$FF
-	jsr LF4B7
-@2:	jsr StaBackbuffer80
-	jmp StaFrontbuffer80
-@3:	pha
-	eor #$FF
-	jsr LF558
-	sta DrwPointTemp
-	pla
-	jsr LF4B7
-	ora DrwPointTemp
-	jmp StaFrontbuffer80
-
-DrwPointTemp:
-	.byte 0
-.endif
+	PopW r3
+	rts
 
 ;---------------------------------------------------------------
 ; TestPoint                                               $C13F
