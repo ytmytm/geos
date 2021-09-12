@@ -647,122 +647,6 @@ shared_rts:
 .endif
 	rts
 
-.ifdef bsw128
-.global LF522
-.import VDCGetFromBGFG
-.import LF5AE
-.import LF56A
-.import LF497
-
-; some unknown helper, seems to be alternative version (80) of
-; previous Font_4 for alternative Font_10 (e6e0), but that one
-; seems to be never called tough
-LE4BC:	ldx FontTVar1
-	cpx r8L
-	beq @7
-	bcs shared_rts
-	inx
-	cpx r8L
-	bne @1
-	jmp @8
-@1:	dex
-	jsr LF497
-	ldy #0
-	sta @andval1
-	lda r8L
-	sub FontTVar1
-	bbrf 6, dispBufferOn, @2
-	tay
-	lda (r6),y
-	bra @4
-@2:	add r5L
-	sta r5L
-	bcc @3
-	inc r5H
-@3:	jsr LF522
-	ldy r6H
-	sty r5H
-	ldy r6L
-	sty r5L
-@4:	sta @andval2
-	lda Z45,x
-	eor r10L
-	and r9L
-	sta @orval1
-	lda r3L
-@andval1 = *+1
-	and #0
-@orval1 = *+1
-	ora #0
-	ldy #0
-	jsr LF56A
-@5:	iny
-	inx
-	cpx r8L
-	beq @6
-	lda Z45,x
-	eor r10L
-	jsr LF5AE
-	bra @5
-@6:	lda Z45,x
-	eor r10L
-	and r9H
-	sta @orval2
-	lda r4H
-@andval2 = *+1
-	and #$30
-@orval2 = *+1
-	ora #0
-	jmp LF5AE
-@7:	lda Z45,x
-	eor r10L
-	and r9H
-	eor #$ff
-	ora r3L
-	ora r4H
-	eor #$FF
-	sta @orval3
-	jsr LF497
-	ldy #0
-	sta @andval3
-	lda r3L
-	ora r4H
-@andval3 = *+1
-	and #0
-@orval3 = *+1
-	ora #0
-	jmp LF56A
-@8:	dex
-	jsr LF497
-	ldy #0
-	sta @andval4
-	iny
-	jsr VDCGetFromBGFG
-	sta @andval5
-	lda Z45,x
-	eor r10L
-	and r9L
-	sta @orval4
-	lda r3L
-@andval4 = *+1
-	and #0
-@orval4 = *+1
-	ora #0
-	ldy #$00
-	jsr LF56A
-	iny
-	lda Z46,x
-	eor r10L
-	and r9H
-	sta @orval5
-	lda r4H
-@andval5 = *+1
-	and #0
-@orval5 = *+1
-	ora #0
-	jmp LF5AE
-.endif
-
 Font_5:
 	ldx r8L
 	lda #0
@@ -976,3 +860,6 @@ FontPutChar80:
 @6:	jsr Font_5
 	bra @3
 .endif
+
+.endif ; beamracer
+
